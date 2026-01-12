@@ -9,9 +9,9 @@ from src.qa import build_chain
 from src.vector_store import VectorStore
 
 
-st.set_page_config(page_title="Hindi/English PDF Q&A", page_icon="📄")
-st.title("📄 Hindi/English/Hinglish PDF QA")
-st.caption("PyMuPDF + Tesseract OCR + Chroma + LLaMA-3.2-3B-Instruct Q4_K_S")
+st.set_page_config(page_title="QnA Assistant")
+st.title("Multilang QnA Assistant")
+#st.caption("PyMuPDF + Tesseract OCR + Chroma + LLaMA-3.2-3B-Instruct Q4_K_S")
 
 # Chat history file
 CHAT_HISTORY_FILE = Path("chat_history.json")
