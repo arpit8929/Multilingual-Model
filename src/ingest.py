@@ -22,17 +22,19 @@ class PageExtraction:
     ocr_text: str
 
 
-def _extract_tables(page: fitz.Page) -> List[str]:
-    """Extract tables using PyMuPDF structured detection."""
+def _extract_tables(page: fitz.Page) -> List[pd.DataFrame]:
+    """Extract tables using PyMuPDF structured detection as DataFrames."""
     try:
         tables = page.find_tables()
     except Exception:
         return []
-    table_strings = []
+    dfs: List[pd.DataFrame] = []
     for table in tables or []:
-        df = pd.DataFrame(table.extract())
-        table_strings.append(df.to_csv(index=False))
-    return table_strings
+        try:
+            dfs.append(pd.DataFrame(table.extract()))
+        except Exception:
+            continue
+    return dfs
 
 
 def _ocr_page(page: fitz.Page, scale: float = 2.0) -> str:
@@ -48,35 +50,58 @@ def extract_pdf(path: Path) -> List[PageExtraction]:
     pages: List[PageExtraction] = []
     for page in tqdm(doc, desc=f"Extracting {path.name}", unit="page"):
         text = page.get_text("text") or ""
-        tables = _extract_tables(page)
+        table_dfs = _extract_tables(page)
+        tables_csv = [df.to_csv(index=False) for df in table_dfs]
         ocr_text = _ocr_page(page)
-        pages.append(PageExtraction(text=text, tables=tables, ocr_text=ocr_text))
+        pages.append(PageExtraction(text=text, tables=tables_csv, ocr_text=ocr_text))
     return pages
 
 
 def build_documents(pages: List[PageExtraction], source: str) -> List[Document]:
     text_blocks: List[str] = []
+    docs: List[Document] = []
+
     for idx, page in enumerate(pages):
-        combined = [pages[idx].text]
-        if pages[idx].tables:
-            combined.append("\n\n".join(pages[idx].tables))
-        if pages[idx].ocr_text:
-            combined.append(pages[idx].ocr_text)
+        # Plain text + OCR combined
+        combined = [page.text]
+        if page.ocr_text:
+            combined.append(page.ocr_text)
         page_text = "\n\n".join(filter(None, combined))
         text_blocks.append(page_text)
+
+        # Table rows as dedicated documents to avoid mixing cities/rows
+        for table_csv in page.tables:
+            try:
+                df = pd.read_csv(pd.compat.StringIO(table_csv))
+            except Exception:
+                # Fallback: store whole table as one doc
+                docs.append(
+                    Document(
+                        page_content=table_csv,
+                        metadata={"source": source, "page": idx + 1, "type": "table"},
+                    )
+                )
+                continue
+            for _, row in df.iterrows():
+                row_text = " | ".join(str(v) for v in row.tolist())
+                docs.append(
+                    Document(
+                        page_content=row_text,
+                        metadata={"source": source, "page": idx + 1, "type": "table_row"},
+                    )
+                )
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
         separators=["\n\n", "\n", " ", ""],
     )
-    docs: List[Document] = []
     for i, block in enumerate(text_blocks):
         for chunk in splitter.split_text(block):
             docs.append(
                 Document(
                     page_content=chunk,
-                    metadata={"source": source, "page": i + 1},
+                    metadata={"source": source, "page": i + 1, "type": "text"},
                 )
             )
     return docs

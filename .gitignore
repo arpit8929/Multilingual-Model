@@ -47,3 +47,6 @@ temp/
 # Logs
 *.log
 
+# Chat history
+chat_history.json
+
