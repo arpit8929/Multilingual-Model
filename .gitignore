@@ -22,7 +22,10 @@ env/
 *~
 
 # Project specific
-
+models/
+*.gguf
+*.pdf
+*.db
 
 # Environment variables
 .env
