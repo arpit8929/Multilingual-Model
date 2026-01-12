@@ -1,0 +1,13 @@
+[server]
+# Enable auto-reload on file changes
+runOnSave = true
+fileWatcherType = "auto"
+
+[runner]
+# Fast reruns for development
+fastReruns = true
+
+[client]
+# Show rerun errors in the UI
+showErrorDetails = true
+

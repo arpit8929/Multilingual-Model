@@ -22,22 +22,17 @@ env/
 *~
 
 # Project specific
-chroma_db/
-models/
-*.gguf
-*.pdf
-*.db
+
 
 # Environment variables
 .env
 .env.local
 
 # OS
-.DS_Store
-Thumbs.db
+
 
 # Streamlit
-.streamlit/
+
 
 # Temporary files
 tmp/
@@ -48,5 +43,5 @@ temp/
 *.log
 
 # Chat history
-chat_history.json
+
 
