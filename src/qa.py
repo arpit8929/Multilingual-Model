@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -10,16 +11,32 @@ from src.vector_store import VectorStore
 
 
 QA_PROMPT = PromptTemplate(
-    input_variables=["context", "question"],
+    input_variables=["context", "question"], 
     template=(
         "You are a helpful assistant for Hindi/English/Hinglish PDF QA.\n"
         "Use ONLY the provided context to answer. If the answer is not in the context, say: \"I do not know\".\n"
-        "Respond in the same language as the question.\n\n"
-        "Rules:\n"
-        "- Answer exactly what is asked. Match criteria exactly (location, date, category, etc.).\n"
-        "- Be precise. Do not guess or assume.\n"
-        "- Use bullet points for lists. Use tables for pairs (name | value).\n"
-        "- Language: Match the question's language (English/Hindi/Hinglish).\n\n"
+        "Respond exactly once in the same language as the question. Do not provide translations or multiple versions.\n\n"
+        "Answering rules:\n"
+        "- Answer exactly what is asked. If the question specifies criteria (location, date, category, etc.), "
+        "only include items that match those criteria exactly.\n"
+        "- For location-based questions (e.g., \"companies in Gandhinagar\", \"companies in Ahmedabad\"):\n"
+        "  * Look at the table/data structure. Each row typically has: Company Name | Location/Address\n"
+        "  * Check the Location/Address column of EACH row individually.\n"
+        "  * ONLY include companies where the Location/Address column explicitly mentions the requested city.\n"
+        "  * If a company's location mentions a different city (e.g., Bengaluru, Mumbai, Ahmedabad when asked for Gandhinagar), EXCLUDE it.\n"
+        "  * Do NOT include companies just because they appear in the same chunk - verify each one's location.\n"
+        "- Be precise and do not include irrelevant information. Do not guess or assume.\n\n"
+        "Formatting rules - ALWAYS FOLLOW:\n"
+        "1. For lists of multiple items, ALWAYS use bullet points:\n"
+        "   Example: - Item 1\n   - Item 2\n   - Item 3\n\n"
+        "2. For pairs of related information (name + value, item + attribute), use a Markdown table:\n"
+        "   Example: | Name | Value |\n   |------|-------|\n   | A | B |\n\n"
+        "3. NEVER write lists as paragraphs. ALWAYS use bullets or tables for structured data.\n\n"
+        "Language rules:\n"
+        "- If the question is mostly in English, answer in English.\n"
+        "- If the question is mostly in Hindi (Devanagari), answer in Hindi.\n"
+        "- If the question is in Hinglish (Hindi written with English/Latin letters or a clear Hindi–English mix), "
+        "answer in Hinglish: Hindi sentences but written in English letters.\n\n"
         "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
     ),
 )
@@ -37,6 +54,118 @@ def load_llm(model_path: Path | str | None = None) -> LlamaCpp:
         f16_kv=True,
         verbose=False,
     )
+
+
+def clean_answer(answer: str) -> str:
+    """
+    Post-process answer to improve quality:
+    - Remove incomplete sentences at the end
+    - Remove excessive repetition
+    - Remove question format instructions
+    - Ensure proper sentence endings
+    """
+    if not answer:
+        return answer
+    
+    answer = answer.strip()
+    
+    # Remove common question format phrases (Hindi and English)
+    question_format_phrases = [
+        "नीचे दिए गए विकल्पों में से एक चुनें",
+        "choose from the options given below",
+        "select the correct answer",
+        "choose one of the options",
+        "नीचे दिए गए विकल्पों में से",
+        "from the options below",
+        "select from options",
+        "option",
+        "विकल्प",
+    ]
+    
+    for phrase in question_format_phrases:
+        # Remove phrase and everything after it if it appears
+        idx = answer.lower().find(phrase.lower())
+        if idx != -1:
+            # Check if it's followed by option letters (A, B, C, etc.)
+            remaining = answer[idx:idx+100].lower()
+            if any(marker in remaining for marker in ['a)', 'b)', 'c)', 'd)', 'option a', 'option b']):
+                answer = answer[:idx].strip()
+                break
+    
+    # Remove lines that look like multiple choice options (A), B), C), etc.)
+    lines = answer.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        line_stripped = line.strip()
+        # Skip lines that start with option markers
+        if re.match(r'^[A-E]\)\s*', line_stripped, re.IGNORECASE):
+            continue
+        # Skip lines that are just option letters
+        if re.match(r'^[A-E]\s*$', line_stripped, re.IGNORECASE):
+            continue
+        cleaned_lines.append(line)
+    answer = '\n'.join(cleaned_lines).strip()
+    
+    # Find the last complete sentence by looking for sentence endings
+    # Hindi/English sentence endings: . ! ? । (Devanagari full stop)
+    # Split into sentences, keeping the punctuation
+    sentences = []
+    current_sentence = ""
+    
+    for char in answer:
+        current_sentence += char
+        if char in ['.', '!', '?', '।']:
+            sentences.append(current_sentence.strip())
+            current_sentence = ""
+    
+    # Add any remaining text
+    if current_sentence.strip():
+        # Check if it looks like an incomplete sentence (very short, no punctuation)
+        if len(current_sentence.strip()) < 10 or not any(c in current_sentence for c in ['।', '.', '!', '?']):
+            # Likely incomplete, don't include it
+            pass
+        else:
+            sentences.append(current_sentence.strip())
+    
+    # Join complete sentences
+    if sentences:
+        result = ' '.join(sentences).strip()
+    else:
+        # Fallback: use original but ensure it ends properly
+        result = answer
+        if result and result[-1] not in ['.', '!', '?', '।']:
+            # Find last space and cut there if sentence seems incomplete
+            last_space = result.rfind(' ')
+            if last_space > len(result) * 0.8:  # If last word is less than 20% of text
+                result = result[:last_space]
+            result += '.'
+    
+    # Remove excessive repetition - check for repeated phrases
+    words = result.split()
+    if len(words) > 15:
+        # Look for 4-word phrases that repeat
+        seen_phrases = {}
+        for i in range(len(words) - 3):
+            phrase = ' '.join(words[i:i+4])
+            if phrase in seen_phrases:
+                seen_phrases[phrase] += 1
+            else:
+                seen_phrases[phrase] = 1
+        
+        # Remove phrases that appear more than twice
+        for phrase, count in seen_phrases.items():
+            if count > 2:
+                # Remove all but first occurrence
+                parts = result.split(phrase)
+                if len(parts) > 2:
+                    result = phrase.join([parts[0]] + parts[2:])
+                    break
+    
+    # Ensure it ends with proper punctuation
+    if result and result[-1] not in ['.', '!', '?', '।']:
+        result += '.'
+    
+    return result.strip()
 
 
 def build_chain(store: Optional[VectorStore] = None) -> RetrievalQA:

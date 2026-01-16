@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 
 from src.ingest import ingest_file
-from src.qa import build_chain
+from src.qa import build_chain, clean_answer
 from src.vector_store import VectorStore
 
 
@@ -34,12 +34,24 @@ def save_chat_history(messages):
     except Exception:
         pass  # Silently fail if can't save
 
+# Initialize components
 if "store" not in st.session_state:
     st.session_state.store = VectorStore()
 if "qa_chain" not in st.session_state:
     st.session_state.qa_chain = build_chain(st.session_state.store)
+
+# Initialize chat history - always load from file on first run
+# This ensures persistence across page refreshes and app restarts
 if "messages" not in st.session_state:
     st.session_state.messages = load_chat_history()
+    st.session_state.last_chat_update = CHAT_HISTORY_FILE.stat().st_mtime if CHAT_HISTORY_FILE.exists() else 0
+else:
+    # Reload from file if it was modified externally (e.g., another session)
+    if CHAT_HISTORY_FILE.exists():
+        current_mtime = CHAT_HISTORY_FILE.stat().st_mtime
+        if current_mtime > st.session_state.get("last_chat_update", 0):
+            st.session_state.messages = load_chat_history()
+            st.session_state.last_chat_update = current_mtime
 
 with st.sidebar:
     st.header("Upload PDF")
@@ -55,6 +67,8 @@ with st.sidebar:
             # Optional: clear previous chat when a new document is loaded
             st.session_state.messages = []
             save_chat_history([])
+            if CHAT_HISTORY_FILE.exists():
+                st.session_state.last_chat_update = CHAT_HISTORY_FILE.stat().st_mtime
         except Exception as exc:
             ingest_status.error(f"Ingest failed: {exc}")
 
@@ -63,9 +77,11 @@ with st.sidebar:
     if st.button("🗑️ Clear Chat History"):
         st.session_state.messages = []
         save_chat_history([])
+        if CHAT_HISTORY_FILE.exists():
+            st.session_state.last_chat_update = CHAT_HISTORY_FILE.stat().st_mtime
         st.rerun()
 
-# Render existing chat history
+# Render existing chat history - display all messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -74,19 +90,40 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("Type your question in English/Hindi/Hinglish")
 
 if prompt:
-    # Show user message and store it
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # Add user message to session state
+    user_message = {"role": "user", "content": prompt}
+    st.session_state.messages.append(user_message)
+    
+    # Save immediately after adding user message
     save_chat_history(st.session_state.messages)
+    # Update last modification time
+    if CHAT_HISTORY_FILE.exists():
+        st.session_state.last_chat_update = CHAT_HISTORY_FILE.stat().st_mtime
+    
+    # Display user message
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Assistant response
+    # Generate and display assistant response
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = st.session_state.qa_chain.invoke({"query": prompt})
-        answer = response.get("result", "")
+            try:
+                response = st.session_state.qa_chain.invoke({"query": prompt})
+                raw_answer = response.get("result", "")
+                # Clean and improve the answer quality
+                answer = clean_answer(raw_answer)
+            except Exception as e:
+                answer = f"Error generating response: {str(e)}"
+        
         st.markdown(answer)
-
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    
+    # Add assistant message to session state
+    assistant_message = {"role": "assistant", "content": answer}
+    st.session_state.messages.append(assistant_message)
+    
+    # Save complete conversation (user + assistant)
     save_chat_history(st.session_state.messages)
+    # Update last modification time
+    if CHAT_HISTORY_FILE.exists():
+        st.session_state.last_chat_update = CHAT_HISTORY_FILE.stat().st_mtime
 
