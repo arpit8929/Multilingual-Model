@@ -11,7 +11,7 @@ from src.vector_store import VectorStore
 
 
 QA_PROMPT = PromptTemplate(
-    input_variables=["context", "question"],
+    input_variables=["context", "question"], 
     template=(
         "You are a helpful assistant for Hindi/English/Hinglish PDF QA.\n"
         "Use ONLY the provided context to answer. If the answer is not in the context, say: \"I do not know\".\n"
