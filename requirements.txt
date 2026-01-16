@@ -1,4 +1,9 @@
-streamlit==1.40.0
+# Backend API
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# ML and NLP
 langchain==0.2.14
 langchain-community==0.2.11
 chromadb==0.5.3

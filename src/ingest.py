@@ -1,7 +1,12 @@
 import argparse
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
+
+# Suppress warnings
+warnings.filterwarnings("ignore", message=".*torch.classes.*")
+warnings.filterwarnings("ignore", category=UserWarning)
 
 import fitz  # PyMuPDF
 import numpy as np

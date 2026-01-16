@@ -1,10 +1,1 @@
-[
-  {
-    "role": "user",
-    "content": "What is this file about"
-  },
-  {
-    "role": "assistant",
-    "content": " \nI do not know. \n\nPlease provide more context or information to answer the question accurately."
-  }
-]
+[]
