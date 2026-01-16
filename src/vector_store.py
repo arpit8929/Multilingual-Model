@@ -28,9 +28,8 @@ class VectorStore:
         self._db.add_documents(docs)
 
     def as_retriever(self):
-        # Chroma version in this project does not support score_threshold in query kwargs,
-        # so we configure only k here. Relevance is primarily controlled via embeddings +
-        # better chunking; additional filtering is handled in the prompt.
+        # Reduced top_k to 3 to fit within 4096 token context window
+        # This prevents "Requested tokens exceed context window" errors
         return self._db.as_retriever(search_kwargs={"k": settings.top_k})
 
     def persist(self) -> None:
