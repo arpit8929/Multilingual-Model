@@ -13,31 +13,34 @@ from src.vector_store import VectorStore
 QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"], 
     template=(
-        "You are a helpful assistant for Hindi/English/Hinglish PDF QA.\n"
-        "Use ONLY the provided context to answer. If the answer is not in the context, say: \"I do not know\".\n"
-        "Respond exactly once in the same language as the question. Do not provide translations or multiple versions.\n\n"
-        "Answering rules:\n"
-        "- Answer exactly what is asked. If the question specifies criteria (location, date, category, etc.), "
-        "only include items that match those criteria exactly.\n"
-        "- For location-based questions (e.g., \"companies in Gandhinagar\", \"companies in Ahmedabad\"):\n"
-        "  * Look at the table/data structure. Each row typically has: Company Name | Location/Address\n"
-        "  * Check the Location/Address column of EACH row individually.\n"
-        "  * ONLY include companies where the Location/Address column explicitly mentions the requested city.\n"
-        "  * If a company's location mentions a different city (e.g., Bengaluru, Mumbai, Ahmedabad when asked for Gandhinagar), EXCLUDE it.\n"
-        "  * Do NOT include companies just because they appear in the same chunk - verify each one's location.\n"
-        "- Be precise and do not include irrelevant information. Do not guess or assume.\n\n"
-        "Formatting rules - ALWAYS FOLLOW:\n"
-        "1. For lists of multiple items, ALWAYS use bullet points:\n"
-        "   Example: - Item 1\n   - Item 2\n   - Item 3\n\n"
-        "2. For pairs of related information (name + value, item + attribute), use a Markdown table:\n"
-        "   Example: | Name | Value |\n   |------|-------|\n   | A | B |\n\n"
-        "3. NEVER write lists as paragraphs. ALWAYS use bullets or tables for structured data.\n\n"
-        "Language rules:\n"
-        "- If the question is mostly in English, answer in English.\n"
-        "- If the question is mostly in Hindi (Devanagari), answer in Hindi.\n"
-        "- If the question is in Hinglish (Hindi written with English/Latin letters or a clear Hindi–English mix), "
-        "answer in Hinglish: Hindi sentences but written in English letters.\n\n"
-        "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
+        "You are a helpful assistant for PDF Q&A. Answer questions based ONLY on the provided context.\n\n"
+        "CRITICAL LANGUAGE RULE:\n"
+        "- If the question is in Hindi (Devanagari script), answer ONLY in Hindi.\n"
+        "- If the question is in English, answer ONLY in English.\n"
+        "- If the question is in Hinglish (Hindi words in English script), answer in Hinglish.\n"
+        "- NEVER mix languages. NEVER add English explanations to Hindi answers.\n"
+        "- Answer DIRECTLY without meta-commentary or explanations about the answer.\n\n"
+        "CRITICAL RULES:\n"
+        "1. Carefully read through ALL the provided context to find the answer.\n"
+        "2. Look for specific names, datasets, methods, numbers, or technical terms mentioned in the context.\n"
+        "3. For questions about datasets, methods, or specific information, search the entire context thoroughly.\n"
+        "4. If you find the answer anywhere in the context, provide it DIRECTLY. Do not add explanations.\n"
+        "5. If the answer is truly not in the context, say: \"उत्तर संदर्भ में नहीं मिला\" (Hindi) or \"Answer not found in context\" (English).\n"
+        "6. Answer exactly what is asked. Be precise and include specific details (names, numbers, dates) when available.\n"
+        "7. DO NOT add meta-commentary like 'The answer is...' or 'According to the context...'. Just provide the answer directly.\n\n"
+        "IMPORTANT: Before saying 'I do not know', carefully re-read the context. Look for:\n"
+        "- Dataset names (e.g., CICIDS-2017, CIC-IDS-2017, NSL-KDD)\n"
+        "- Method names (e.g., LIME, SHAP, Random Forest)\n"
+        "- Numbers and percentages\n"
+        "- Technical terms related to the question\n\n"
+        "Formatting:\n"
+        "- Use bullet points for lists\n"
+        "- Use tables for structured data (name | value)\n"
+        "- Be specific: include exact names, numbers, and technical terms\n"
+        "- Keep answers concise and direct\n\n"
+        "Context:\n{context}\n\n"
+        "Question: {question}\n\n"
+        "Answer:"
     ),
 )
 
@@ -62,12 +65,45 @@ def clean_answer(answer: str) -> str:
     - Remove incomplete sentences at the end
     - Remove excessive repetition
     - Remove question format instructions
+    - Remove meta-commentary and explanations
     - Ensure proper sentence endings
     """
     if not answer:
         return answer
     
     answer = answer.strip()
+    
+    # Remove meta-commentary patterns (English and Hindi)
+    meta_patterns = [
+        r"The answer is\s*[:\-]?\s*",
+        r"According to the context[,\s]*",
+        r"Based on the provided context[,\s]*",
+        r"The information provided indicates that\s*",
+        r"Note:\s*.*",
+        r"Note that\s*.*",
+        r"उत्तर यह है\s*[:\-]?\s*",
+        r"संदर्भ के अनुसार[,\s]*",
+        r"प्रदान किए गए संदर्भ के आधार पर[,\s]*",
+        r"सूचना से पता चलता है कि\s*",
+        r"ध्यान दें:\s*.*",
+        r"This work proposes\s*",
+        r"The question asks\s*",
+        r"The answer provided is\s*",
+    ]
+    
+    import re
+    for pattern in meta_patterns:
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE)
+    
+    # Remove explanations that start with "The answer is found in..." or similar
+    explanation_patterns = [
+        r"The answer is found in.*?\.\s*",
+        r"The question asks about.*?\.\s*",
+        r"Note:.*?\.\s*",
+        r"Note that.*?\.\s*",
+    ]
+    for pattern in explanation_patterns:
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.DOTALL)
     
     # Remove common question format phrases (Hindi and English)
     question_format_phrases = [
@@ -169,8 +205,10 @@ def clean_answer(answer: str) -> str:
 
 
 def build_chain(store: Optional[VectorStore] = None) -> RetrievalQA:
+    """Build QA chain with improved retrieval."""
     store = store or VectorStore()
     llm = load_llm()
+    # Get retriever with increased document count for better coverage
     retriever = store.as_retriever()
     return RetrievalQA.from_chain_type(
         llm=llm,
