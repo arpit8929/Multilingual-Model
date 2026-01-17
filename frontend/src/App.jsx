@@ -6,7 +6,8 @@ import { getStatus, uploadPDF, askQuestion, clearDocuments, getChatHistory, clea
 function App() {
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
-  const [status, setStatus] = useState({ document_count: 0, status: 'no_documents' })
+  const [isUploading, setIsUploading] = useState(false)
+  const [status, setStatus] = useState({ document_count: 0, status: 'no_documents', document_name: null })
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -35,7 +36,7 @@ function App() {
   }
 
   const handleUpload = async (file, clearExisting) => {
-    setIsLoading(true)
+    setIsUploading(true)
     try {
       const result = await uploadPDF(file, clearExisting)
       await loadStatus()
@@ -44,7 +45,7 @@ function App() {
     } catch (error) {
       return { success: false, message: error.message || 'Upload failed' }
     } finally {
-      setIsLoading(false)
+      setIsUploading(false)
     }
   }
 
@@ -104,7 +105,7 @@ function App() {
         onClear={handleClear}
         onClearChat={handleClearChat}
         status={status}
-        isLoading={isLoading}
+        isLoading={isUploading}
       />
       <div className="flex-1 flex flex-col">
         <ChatInterface

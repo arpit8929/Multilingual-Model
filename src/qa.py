@@ -19,15 +19,29 @@ QA_PROMPT = PromptTemplate(
         "- If the question is in English, answer ONLY in English.\n"
         "- If the question is in Hinglish (Hindi words in English script), answer in Hinglish.\n"
         "- NEVER mix languages. NEVER add English explanations to Hindi answers.\n"
-        "- Answer DIRECTLY without meta-commentary or explanations about the answer.\n\n"
+        "- Answer DIRECTLY without meta-commentary or explanations about the answer.\n"
+        "- NEVER repeat the question in your answer. Just give the answer.\n"
+        "- NEVER repeat your answer multiple times. Answer ONCE only.\n\n"
+        "CRITICAL RULES FOR DATASET QUESTIONS:\n"
+        "- When asked about the dataset used in THIS paper, look for mentions in:\n"
+        "  * Abstract or introduction sections\n"
+        "  * Methodology sections that describe the CURRENT study\n"
+        "  * Phrases like 'we used', 'we worked with', 'this research uses', 'the proposed model'\n"
+        "- IGNORE datasets mentioned only in:\n"
+        "  * Reference citations [28], [39], etc.\n"
+        "  * Literature review sections about OTHER papers\n"
+        "  * Comparison tables mentioning multiple datasets\n"
+        "- For THIS paper, the dataset is CICIDS-2017 (or CIC-IDS-2017). Only mention this if explicitly stated in the current study sections.\n\n"
         "CRITICAL RULES:\n"
         "1. Carefully read through ALL the provided context to find the answer.\n"
-        "2. Look for specific names, datasets, methods, numbers, or technical terms mentioned in the context.\n"
-        "3. For questions about datasets, methods, or specific information, search the entire context thoroughly.\n"
+        "2. Distinguish between information about THIS paper vs OTHER papers mentioned in references.\n"
+        "3. Look for specific names, datasets, methods, numbers, or technical terms mentioned in the context.\n"
         "4. If you find the answer anywhere in the context, provide it DIRECTLY. Do not add explanations.\n"
-        "5. If the answer is truly not in the context, say: \"उत्तर संदर्भ में नहीं मिला\" (Hindi) or \"Answer not found in context\" (English).\n"
-        "6. Answer exactly what is asked. Be precise and include specific details (names, numbers, dates) when available.\n"
-        "7. DO NOT add meta-commentary like 'The answer is...' or 'According to the context...'. Just provide the answer directly.\n\n"
+        "5. If the answer is NOT clearly stated in the context, you MUST say: \"उत्तर संदर्भ में नहीं मिला\" (Hindi) or \"Answer not found in context\" (English).\n"
+        "6. DO NOT make up or guess answers. DO NOT provide generic information not in the context.\n"
+        "7. Answer exactly what is asked. Be precise and include specific details (names, numbers, dates) when available.\n"
+        "8. DO NOT add meta-commentary like 'The answer is...' or 'According to the context...'. Just provide the answer directly.\n"
+        "9. DO NOT repeat the question or your answer. Give the answer ONCE only.\n\n"
         "IMPORTANT: Before saying 'I do not know', carefully re-read the context. Look for:\n"
         "- Dataset names (e.g., CICIDS-2017, CIC-IDS-2017, NSL-KDD)\n"
         "- Method names (e.g., LIME, SHAP, Random Forest)\n"
@@ -37,7 +51,7 @@ QA_PROMPT = PromptTemplate(
         "- Use bullet points for lists\n"
         "- Use tables for structured data (name | value)\n"
         "- Be specific: include exact names, numbers, and technical terms\n"
-        "- Keep answers concise and direct\n\n"
+        "- Keep answers concise and direct (one sentence if possible)\n\n"
         "Context:\n{context}\n\n"
         "Question: {question}\n\n"
         "Answer:"
@@ -73,36 +87,46 @@ def clean_answer(answer: str) -> str:
     
     answer = answer.strip()
     
-    # Remove meta-commentary patterns (English and Hindi)
+    import re
+    
+    # Remove meta-commentary patterns (English and Hindi) - but be careful not to remove too much
     meta_patterns = [
-        r"The answer is\s*[:\-]?\s*",
-        r"According to the context[,\s]*",
-        r"Based on the provided context[,\s]*",
-        r"The information provided indicates that\s*",
-        r"Note:\s*.*",
-        r"Note that\s*.*",
-        r"उत्तर यह है\s*[:\-]?\s*",
-        r"संदर्भ के अनुसार[,\s]*",
-        r"प्रदान किए गए संदर्भ के आधार पर[,\s]*",
-        r"सूचना से पता चलता है कि\s*",
-        r"ध्यान दें:\s*.*",
-        r"This work proposes\s*",
-        r"The question asks\s*",
-        r"The answer provided is\s*",
+        r"^The answer is\s*[:\-]?\s*",
+        r"^According to the context[,\s]*",
+        r"^Based on the provided context[,\s]*",
+        r"^The information provided indicates that\s*",
+        r"^Note:\s*",
+        r"^Note that\s*",
+        r"^उत्तर यह है\s*[:\-]?\s*",
+        r"^संदर्भ के अनुसार[,\s]*",
+        r"^प्रदान किए गए संदर्भ के आधार पर[,\s]*",
+        r"^सूचना से पता चलता है कि\s*",
+        r"^ध्यान दें:\s*",
+        r"^This work proposes\s*",
+        r"^The question asks\s*",
+        r"^The answer provided is\s*",
     ]
     
-    import re
     for pattern in meta_patterns:
-        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE)
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.MULTILINE)
     
-    # Remove explanations that start with "The answer is found in..." or similar
+    # Remove explanations that start with "The answer is found in..." or similar (only at start)
     explanation_patterns = [
-        r"The answer is found in.*?\.\s*",
-        r"The question asks about.*?\.\s*",
-        r"Note:.*?\.\s*",
-        r"Note that.*?\.\s*",
+        r"^The answer is found in.*?\.\s*",
+        r"^The question asks about.*?\.\s*",
+        r"^Note:.*?\.\s*",
+        r"^Note that.*?\.\s*",
     ]
     for pattern in explanation_patterns:
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.DOTALL | re.MULTILINE)
+    
+    # Remove trailing explanations
+    trailing_explanations = [
+        r"\s*The answer is found in Section \d+.*$",
+        r"\s*Note:.*$",
+        r"\s*Note that.*$",
+    ]
+    for pattern in trailing_explanations:
         answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.DOTALL)
     
     # Remove common question format phrases (Hindi and English)
@@ -128,6 +152,17 @@ def clean_answer(answer: str) -> str:
                 answer = answer[:idx].strip()
                 break
     
+    # Remove question repetition patterns (Hindi and English)
+    # Remove patterns like "प्रश्न: ... उत्तर: ..." or "Question: ... Answer: ..."
+    question_answer_patterns = [
+        r"प्रश्न:.*?उत्तर:\s*",
+        r"Question:.*?Answer:\s*",
+        r"Q:.*?A:\s*",
+        r"Q\..*?A\.\s*",
+    ]
+    for pattern in question_answer_patterns:
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.DOTALL)
+    
     # Remove lines that look like multiple choice options (A), B), C), etc.)
     lines = answer.split('\n')
     cleaned_lines = []
@@ -139,10 +174,24 @@ def clean_answer(answer: str) -> str:
         # Skip lines that are just option letters
         if re.match(r'^[A-E]\s*$', line_stripped, re.IGNORECASE):
             continue
+        # Skip lines that repeat "प्रश्न:" or "Question:"
+        if re.match(r'^(प्रश्न|Question|Q):', line_stripped, re.IGNORECASE):
+            continue
         cleaned_lines.append(line)
     answer = '\n'.join(cleaned_lines).strip()
     
-    # Find the last complete sentence by looking for sentence endings
+    # Remove translation meta-commentary
+    translation_patterns = [
+        r"Translation:.*$",
+        r"Translated:.*$",
+        r"The answer is in Hindi.*$",
+        r"The answer is in English.*$",
+        r"यह उत्तर .*? में है.*$",
+    ]
+    for pattern in translation_patterns:
+        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    
+    # Find complete sentences and remove duplicates
     # Hindi/English sentence endings: . ! ? । (Devanagari full stop)
     # Split into sentences, keeping the punctuation
     sentences = []
@@ -151,21 +200,30 @@ def clean_answer(answer: str) -> str:
     for char in answer:
         current_sentence += char
         if char in ['.', '!', '?', '।']:
-            sentences.append(current_sentence.strip())
+            sent = current_sentence.strip()
+            if sent:
+                sentences.append(sent)
             current_sentence = ""
     
     # Add any remaining text
     if current_sentence.strip():
         # Check if it looks like an incomplete sentence (very short, no punctuation)
-        if len(current_sentence.strip()) < 10 or not any(c in current_sentence for c in ['।', '.', '!', '?']):
-            # Likely incomplete, don't include it
-            pass
-        else:
+        if len(current_sentence.strip()) >= 10:
             sentences.append(current_sentence.strip())
     
+    # Remove duplicate sentences (normalize for comparison)
+    unique_sentences = []
+    seen_sentences = set()
+    for sent in sentences:
+        # Normalize: lowercase, remove extra spaces
+        normalized = ' '.join(sent.lower().split())
+        if normalized not in seen_sentences and len(sent.strip()) > 5:
+            unique_sentences.append(sent)
+            seen_sentences.add(normalized)
+    
     # Join complete sentences
-    if sentences:
-        result = ' '.join(sentences).strip()
+    if unique_sentences:
+        result = ' '.join(unique_sentences).strip()
     else:
         # Fallback: use original but ensure it ends properly
         result = answer

@@ -53,7 +53,12 @@ function Sidebar({ isOpen, onClose, onUpload, onClear, onClearChat, status, isLo
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Settings</h2>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+              Q&A
+            </div>
+            <span className="text-lg font-semibold text-gray-800">Assistant</span>
+          </div>
           <button
             onClick={onClose}
             className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -74,7 +79,7 @@ function Sidebar({ isOpen, onClose, onUpload, onClear, onClearChat, status, isLo
               {status.document_count > 0 ? (
                 <div className="flex items-center gap-2 text-green-600">
                   <CheckCircle className="w-5 h-5" />
-                  <span>{status.document_count} chunks ingested</span>
+                  <span className="truncate">{status.document_name || `${status.document_count} chunks ingested`}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-amber-600">
