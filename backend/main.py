@@ -3,6 +3,7 @@ FastAPI backend for Multilingual QnA Assistant
 """
 import json
 import os
+import re
 import sys
 import tempfile
 import warnings
@@ -322,6 +323,43 @@ async def ask_question(request: QuestionRequest):
             if not answer or not answer.strip():
                 print("WARNING: clean_answer removed all content, using raw answer")
                 answer = raw_answer.strip()
+            
+            # Post-process: Check if answer seems hallucinated for limitations questions
+            question_lower = request.question.lower()
+            if any(kw in question_lower for kw in ["limitation", "limitations", "कमी", "सीमाएं"]):
+                # Get all source content to check if specific limitations are mentioned
+                all_source_content = " ".join([
+                    doc.page_content if hasattr(doc, 'page_content') else str(doc) 
+                    for doc in source_docs
+                ]).lower()
+                
+                # Check if sources only vaguely mention limitations without details
+                vague_mentions = [
+                    "limitations were identified",
+                    "limitations and shortcomings were identified",
+                    "limitations were",
+                    "shortcomings were",
+                ]
+                has_vague_mention = any(phrase in all_source_content for phrase in vague_mentions)
+                
+                # Check if answer contains generic patterns not in source
+                generic_patterns_in_answer = [
+                    r"real-time.*network.*traffic",
+                    r"handle.*network.*traffic",
+                    r"analyze.*network.*traffic",
+                ]
+                has_generic = any(re.search(pattern, answer, re.IGNORECASE) for pattern in generic_patterns_in_answer)
+                
+                # If sources only vaguely mention limitations and answer is generic, likely hallucinated
+                if has_vague_mention and has_generic:
+                    # Look for specific limitations in sources
+                    if not any(specific in all_source_content for specific in [
+                        "limitation is", "limitation of", "first limitation", "second limitation",
+                        "main limitation", "key limitation", "primary limitation"
+                    ]):
+                        # No specific limitations found - answer is likely hallucinated
+                        is_hindi = any(ord(c) >= 0x0900 and ord(c) <= 0x097F for c in request.question)
+                        answer = "उत्तर संदर्भ में नहीं मिला" if is_hindi else "Answer not found in context"
         else:
             # Fallback: Try to extract answer from source documents
             print("WARNING: No raw answer, attempting to extract from source documents")
