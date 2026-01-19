@@ -22,6 +22,7 @@ env/
 *~
 
 # Project specific
+chroma_db/
 models/
 *.gguf
 *.pdf
@@ -32,7 +33,8 @@ models/
 .env.local
 
 # OS
-
+.DS_Store
+Thumbs.db
 
 # Streamlit
 
