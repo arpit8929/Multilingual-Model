@@ -44,10 +44,12 @@ function ChatInput({ onSubmit, isLoading }) {
           disabled={isLoading}
         />
       </div>
+      <div style={{ padding: '0px 0px 9px 2px' }}>
       <button
+        
         type="submit"
         disabled={!input.trim() || isLoading}
-        className="p-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="p-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors "
       >
         {isLoading ? (
           <Loader2 className="w-5 h-5 animate-spin" />
@@ -55,6 +57,8 @@ function ChatInput({ onSubmit, isLoading }) {
           <Send className="w-5 h-5" />
         )}
       </button>
+      </div>
+      
     </form>
   )
 }

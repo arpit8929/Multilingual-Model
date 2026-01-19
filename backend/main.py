@@ -45,10 +45,8 @@ app.add_middleware(
 vector_store = None
 qa_chain = None
 CHAT_HISTORY_FILE = project_root / "chat_history.json"
-<<<<<<< HEAD
-=======
+
 uploaded_documents = []  # Track uploaded document names
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
 
 def load_chat_history():
     """Load chat history from file."""
@@ -69,8 +67,6 @@ def save_chat_history(messages):
         pass
 
 
-<<<<<<< HEAD
-=======
 def extract_answer_from_sources(question: str, source_docs: List) -> str:
     """Fallback: Extract answer from source documents when model fails."""
     if not source_docs:
@@ -175,7 +171,6 @@ def extract_answer_from_sources(question: str, source_docs: List) -> str:
     return ""
 
 
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
 class QuestionRequest(BaseModel):
     question: str
 
@@ -189,10 +184,7 @@ class QuestionResponse(BaseModel):
 class StatusResponse(BaseModel):
     document_count: int
     status: str
-<<<<<<< HEAD
-=======
     document_name: Optional[str] = None
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
 
 
 @app.on_event("startup")
@@ -221,26 +213,17 @@ async def root():
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
     """Get current status of the system."""
-<<<<<<< HEAD
-    global vector_store
-=======
     global vector_store, uploaded_documents
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
     if vector_store is None:
         raise HTTPException(status_code=500, detail="Vector store not initialized")
     
     doc_count = vector_store.get_document_count()
-<<<<<<< HEAD
-    return StatusResponse(
-        document_count=doc_count,
-        status="ready" if doc_count > 0 else "no_documents"
-=======
+    document_name = uploaded_documents[-1] if uploaded_documents else None
     document_name = uploaded_documents[-1] if uploaded_documents else None
     return StatusResponse(
         document_count=doc_count,
         status="ready" if doc_count > 0 else "no_documents",
         document_name=document_name
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
     )
 
 
@@ -266,18 +249,12 @@ async def upload_pdf(
             tmp_path = Path(tmp.name)
         
         # Clear vector store if requested
-<<<<<<< HEAD
-        if clear_existing:
-            vector_store.clear()
-            qa_chain = build_chain(vector_store)
-=======
         global uploaded_documents
         if clear_existing:
             vector_store.clear()
             qa_chain = build_chain(vector_store)
             uploaded_documents = []
             uploaded_documents = []
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
         
         # Ensure we're in project root for relative paths
         original_cwd = os.getcwd()
@@ -292,27 +269,22 @@ async def upload_pdf(
             os.chdir(original_cwd)
         
         # Clean up temp file
-<<<<<<< HEAD
-=======
+        filename = file.filename
         filename = file.filename
         
         # Store document name
         if filename:
             uploaded_documents.append(filename)
         
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
         tmp_path.unlink()
         
         return {
             "success": True,
             "message": f"Successfully ingested {count} chunks",
             "chunk_count": count,
-<<<<<<< HEAD
-            "document_count": vector_store.get_document_count()
-=======
+            "document_count": vector_store.get_document_count(),
             "document_count": vector_store.get_document_count(),
             "document_name": filename
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to ingest PDF: {str(e)}")
@@ -343,13 +315,7 @@ async def ask_question(request: QuestionRequest):
         raw_answer = response.get("result", "")
         source_docs = response.get("source_documents", [])
         
-<<<<<<< HEAD
-        # Clean the answer
-        if raw_answer and raw_answer.strip():
-            answer = clean_answer(raw_answer)
-        else:
-            answer = "⚠️ **No response generated.**\n\nThe model did not produce an answer."
-=======
+        # Debug logging
         # Debug logging
         print(f"DEBUG: Raw answer length: {len(raw_answer) if raw_answer else 0}")
         print(f"DEBUG: Raw answer preview: {raw_answer[:200] if raw_answer else 'EMPTY'}")
@@ -367,7 +333,6 @@ async def ask_question(request: QuestionRequest):
             answer = extract_answer_from_sources(request.question, source_docs)
             if not answer:
                 answer = "⚠️ **No response generated.**\n\nThe model did not produce an answer. Please check the source documents below."
->>>>>>> 4840cd6c5f273cd9e3d73f1234db2a58aaa3bfad
         
         # Serialize source documents
         source_docs_serialized = []
