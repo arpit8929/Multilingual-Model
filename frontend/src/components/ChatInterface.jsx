@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
-import { Send, Menu } from 'lucide-react'
+import { useRef, useEffect } from 'react'
+import { Menu } from 'lucide-react'
 import MessageList from './MessageList'
 import ChatInput from './ChatInput'
 
@@ -21,14 +21,21 @@ function ChatInterface({ messages, onAsk, isLoading, onMenuClick }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div
+      className="flex flex-col h-full bg-white transition-all duration-300"
+      style={{ marginLeft: 'var(--sidebar-offset)' }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-white shadow-sm z-10">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm z-10 relative">
         <div className="flex items-center gap-3">
           <button
-            onClick={onMenuClick}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors z-20 relative"
+            onClick={(e) => {
+              e.stopPropagation()
+              onMenuClick()
+            }}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative z-30"
             aria-label="Menu"
+            type="button"
           >
             <Menu className="w-5 h-5" />
           </button>
