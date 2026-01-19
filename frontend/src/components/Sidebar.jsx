@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  X,
   Upload,
   FileText,
   Trash2,
@@ -61,6 +60,7 @@ function Sidebar({ isOpen, onClose, onUpload, onClear, onClearChat, status, isLo
     }
   }
 
+  // Sidebar closes only if NOT pinned
   const handleClose = () => {
     if (!isPinned) {
       onClose()
@@ -102,30 +102,18 @@ function Sidebar({ isOpen, onClose, onUpload, onClear, onClearChat, status, isLo
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-2">
-            {/* Pin Button */}
-            <button
-              onClick={() => setIsPinned(!isPinned)}
-              title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-              className={`p-2 rounded-lg transition-colors ${
-                isPinned
-                  ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                  : 'hover:bg-gray-100'
-              }`}
-            >
-              {isPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
-            </button>
-
-            {/* Close Button */}
-            <button
-              onClick={handleClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Close Sidebar"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          {/* Pin Button (Only control inside sidebar now) */}
+          <button
+            onClick={() => setIsPinned(!isPinned)}
+            title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+            className={`p-2 rounded-lg transition-colors ${
+              isPinned
+                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                : 'hover:bg-gray-100'
+            }`}
+          >
+            {isPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
+          </button>
         </div>
 
         {/* Content */}
