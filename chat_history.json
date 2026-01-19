@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "role": "user",
+    "content": "give all the tasks done by soham"
+  },
+  {
+    "role": "assistant",
+    "content": "सोहम ने निम्नलिखित कार्यों को पूरा किया: \n• हिंदी और अंग्रेजी टेक्स्ट एक्सट्रैक्शन के लिए OCR उपकरणों को स्थापित और सेटअप किया। • अंग्रेजी, हिंदी और मिश्रित भाषा PDFs के साथ प्रणाली का परीक्षण किया। • लैंग्वेज डिटेक्शन और सटीकता को सत्यापित किया। • अंतर्निहित चंकों के साथ विक्टर स्टोरेज में एकीकृत चंकिंग मॉड्यूल को परीक्षण किया। • दस्तावेज़ संग्रहण और पुनर्प्राप्ति प्रक्रिया की दस्तावेजीकरण और परिणामों का विश्लेषण किया। सोहम ने निम्नलिखित कार्यों.",
+    "source_documents": [
+      {
+        "source": "C:\\Users\\soham\\AppData\\Local\\Temp\\tmpdanyb9b4.pdf",
+        "page": 2,
+        "type": "text",
+        "content": "(Karan) \n• Integrated LLM for answer generation (Soham) \n• Designed User Interface for testing (Arpit) \n• Tested response relevance and correctness (Mihir) \n17/01/2026 \n• Analyzed error cases and incorrect responses (Soham, \nKaran) \n• Documented text processing workflow and analyzed results \n(Arpit, Mihir) \n18/01/2026 \nHoliday (Sunday) \n \nNext Week Plan \nDesign working UI and integrate with backend \n \n \n \nREFERENCE:   \n• \nhttps://tesseract-ocr.github.io/ \n• \nhttps://aws.amazon.com/what-is/retrie"
+      },
+      {
+        "source": "C:\\Users\\soham\\AppData\\Local\\Temp\\tmpdanyb9b4.pdf",
+        "page": 2,
+        "type": "text",
+        "content": "(Karan)\ne Integrated LLM for answer generation (Soham)\ne Designed User Interface for testing (Arpit)\ne Tested response relevance and correctness (Mihir)\n7/03/2026 e Analyzed error cases and incorrect responses (Soham,\nKaran)\ne Documented text processing workflow and analyzed results\n(Arpit, Mihir)\n78/0/2026 Holiday (Sunday)\nNext Week Plan Design working Ul and integrate with backend\nREFERENCE:\ne = https://tesseract-ocr.github.io/\ne https: //aws.amazon.com/what-is/retrieval-aygmented-generation/\n"
+      },
+      {
+        "source": "C:\\Users\\soham\\AppData\\Local\\Temp\\tmpdanyb9b4.pdf",
+        "page": 1,
+        "type": "text",
+        "content": "क-- >> BHASKARACHARYA NATIONAL INSTITUTE FOR\nBISAG-N SPACE APPLICATIONS AND GEO-INFORMATICS\nWEEKLY PROGRESS REPORT (2/0/2026 — 8/0/2026)\nPROJECT NAME Multilang Q/A Assistant\nA multilingual system that extracts and understands\ncontent from Hindi, English documents to accurately\nanswer user questions based solely on the document\nPROJECT DESCRIPTION : 0 एएनील०\nGROUP MEMBER : Karan Thakkar, Soham Patel,\nArpit Devganiya, Mihir Ram\nGROUP ID: 2026G22\nDr. Manoj Pandya\nGROUP GUIDE :\nSidhdharth Patel\nGROU"
+      },
+      {
+        "source": "C:\\Users\\soham\\AppData\\Local\\Temp\\tmpdanyb9b4.pdf",
+        "page": 2,
+        "type": "table",
+        "content": "0,1,2,3\r\n12/01/2026,\"• We installed and configured OCR tools for Hindi and English\ntext extraction.\n• We installed and tested multilingual embedding models.\",,\r\n13/01/2026,,\"• Verified Language detection and accuracy for hindi, English\",\r\n,,\"and mixed text (Soham, Karan)\",\r\n,,• Integrated chunking module with vector storage and tested,\r\n,,\"document storage and retrieval process (Arpit, Mihir)\",\r\n14/01/2026,• Holiday (Uttarayan),,\r\n15/01/2026,,• Setup pdf parsing tools for structured text extract"
+      },
+      {
+        "source": "C:\\Users\\soham\\AppData\\Local\\Temp\\tmpdanyb9b4.pdf",
+        "page": 2,
+        "type": "text",
+        "content": "Page 2 \n \n    12/01/2026  \n• We installed and configured OCR tools for Hindi and English \ntext extraction. \n• We installed and tested multilingual embedding models. \n13/01/2026 \n• Verified Language detection and accuracy for hindi, English \nand mixed text (Soham, Karan) \n• \nIntegrated chunking module with vector storage and tested \ndocument storage and retrieval process (Arpit, Mihir) \n14/01/2026 \n• Holiday (Uttarayan) \n15/01/2026 \n• Setup pdf parsing tools for structured text extraction (Mihir "
+      }
+    ]
+  }
+]
