@@ -12,7 +12,7 @@ node_modules/
 
 # Vite
 .vite/
-vite.config.*.timestamp-*
+vite.config..timestamp-
 
 # Environment variables
 .env
@@ -35,7 +35,7 @@ lerna-debug.log*
 .idea
 .DS_Store
 *.suo
-*.ntvs*
+.ntvs
 *.njsproj
 *.sln
 *.sw?
@@ -63,7 +63,7 @@ venv/
 ENV/
 env/
 
-__pycache__/
+pycache/
 *.py[cod]
 *$py.class
 *.so
