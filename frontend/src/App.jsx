@@ -6,6 +6,7 @@ import { getStatus, uploadPDF, askQuestion, clearDocuments, getChatHistory, clea
 function App() {
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+
   const [isUploading, setIsUploading] = useState(false)
   const [status, setStatus] = useState({ document_count: 0, status: 'no_documents', document_name: null })
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -24,7 +25,7 @@ function App() {
     } catch (error) {
       console.error('Failed to load chat history:', error)
     }
-  }
+  }  
 
   const loadStatus = async () => {
     try {
@@ -36,6 +37,7 @@ function App() {
   }
 
   const handleUpload = async (file, clearExisting) => {
+
     setIsUploading(true)
     try {
       const result = await uploadPDF(file, clearExisting)
@@ -45,6 +47,7 @@ function App() {
     } catch (error) {
       return { success: false, message: error.message || 'Upload failed' }
     } finally {
+
       setIsUploading(false)
     }
   }
@@ -105,6 +108,7 @@ function App() {
         onClear={handleClear}
         onClearChat={handleClearChat}
         status={status}
+
         isLoading={isUploading}
       />
       <div className="flex-1 flex flex-col">

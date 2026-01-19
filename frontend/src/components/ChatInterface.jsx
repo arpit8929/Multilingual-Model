@@ -26,6 +26,7 @@ function ChatInterface({ messages, onAsk, isLoading, onMenuClick }) {
       style={{ marginLeft: 'var(--sidebar-offset)' }}
     >
       {/* Header */}
+
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white shadow-sm z-10 relative">
         <div className="flex items-center gap-3">
           <button

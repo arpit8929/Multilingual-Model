@@ -46,6 +46,7 @@ app.add_middleware(
 vector_store = None
 qa_chain = None
 CHAT_HISTORY_FILE = project_root / "chat_history.json"
+
 uploaded_documents = []  # Track uploaded document names
 
 def load_chat_history():
@@ -219,6 +220,7 @@ async def get_status():
     
     doc_count = vector_store.get_document_count()
     document_name = uploaded_documents[-1] if uploaded_documents else None
+    document_name = uploaded_documents[-1] if uploaded_documents else None
     return StatusResponse(
         document_count=doc_count,
         status="ready" if doc_count > 0 else "no_documents",
@@ -269,6 +271,7 @@ async def upload_pdf(
         
         # Clean up temp file
         filename = file.filename
+        filename = file.filename
         
         # Store document name
         if filename:
@@ -280,6 +283,7 @@ async def upload_pdf(
             "success": True,
             "message": f"Successfully ingested {count} chunks",
             "chunk_count": count,
+            "document_count": vector_store.get_document_count(),
             "document_count": vector_store.get_document_count(),
             "document_name": filename
         }
@@ -312,6 +316,7 @@ async def ask_question(request: QuestionRequest):
         raw_answer = response.get("result", "")
         source_docs = response.get("source_documents", [])
         
+        # Debug logging
         # Debug logging
         print(f"DEBUG: Raw answer length: {len(raw_answer) if raw_answer else 0}")
         print(f"DEBUG: Raw answer preview: {raw_answer[:200] if raw_answer else 'EMPTY'}")

@@ -13,6 +13,59 @@ from src.vector_store import VectorStore
 QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"], 
     template=(
+<<<<<<< HEAD
+        "You are a helpful assistant for Hindi/English/Hinglish PDF QA.\n"
+        "Use ONLY the provided context to answer. If the answer is not in the context, say: \"I do not know\".\n"
+        "Respond exactly once in the same language as the question. Do not provide translations or multiple versions.\n\n"
+        "Answering rules:\n"
+        "- Answer exactly what is asked. If the question specifies criteria (location, date, category, etc.), "
+        "only include items that match those criteria exactly.\n"
+        "- If the context contains unrelated or off-topic text, ignore it. Do NOT bring in topics unrelated to the question.\n"
+        "- For \"how\" questions (e.g., \"कैसे\", \"how\", \"kaise\"), explain the process, mechanism, or method. "
+        "Do NOT just state that something happens - explain HOW it happens.\n"
+        "- For \"why\" questions, provide reasons, causes, or explanations.\n"
+        "- For \"what\" questions, provide definitions, descriptions, or explanations.\n"
+        "- NEVER copy question instructions, multiple-choice options, or question format text from the context. "
+        "Only extract and explain the actual content/information.\n"
+        "- Do NOT include phrases like \"नीचे दिए गए विकल्पों में से एक चुनें\", \"choose from options\", "
+        "\"select the correct answer\", or similar question format instructions in your answer.\n"
+        "- For location-based questions (e.g., \"companies in Gandhinagar\", \"companies in Ahmedabad\"):\n"
+        "  * Look at the table/data structure. Each row typically has: Company Name | Location/Address\n"
+        "  * Check the Location/Address column of EACH row individually.\n"
+        "  * ONLY include companies where the Location/Address column explicitly mentions the requested city.\n"
+        "  * If a company's location mentions a different city (e.g., Bengaluru, Mumbai, Ahmedabad when asked for Gandhinagar), EXCLUDE it.\n"
+        "  * Do NOT include companies just because they appear in the same chunk - verify each one's location.\n"
+        "- Be precise and do not include irrelevant information. Do not guess or assume.\n\n"
+        "Quality rules - CRITICAL:\n"
+        "- Provide COMPLETE answers. Ensure your answer ends with a complete sentence, not mid-sentence.\n"
+        "- Avoid repetition. Do not repeat the same information multiple times in different ways.\n"
+        "- Be concise but comprehensive. Cover all key points from the context without being verbose.\n"
+        "- Structure your answer logically:\n"
+        "  1. Start with a direct answer to the question\n"
+        "  2. Provide supporting details and explanations\n"
+        "  3. Conclude with a summary if the answer is long\n"
+        "- When explaining any concept/term or answering \"how\" questions, include:\n"
+        "  * A clear definition or meaning (if applicable)\n"
+        "  * The process, mechanism, or method (for \"how\" questions)\n"
+        "  * Key characteristics or components\n"
+        "  * Examples or specific ways it happens (if mentioned in context)\n"
+        "  * Why it matters (if mentioned in the context)\n"
+        "- Keep answers concise (ideally 1-3 sentences). If the answer is not explicitly supported by context, say \"I do not know\".\n"
+        "- Do NOT cut off mid-sentence. Always complete your thoughts.\n"
+        "- Provide a natural, flowing answer as if explaining to someone, not copying from a question paper.\n\n"
+        "Formatting rules - ALWAYS FOLLOW:\n"
+        "1. For lists of multiple items, ALWAYS use bullet points:\n"
+        "   Example: - Item 1\n   - Item 2\n   - Item 3\n\n"
+        "2. For pairs of related information (name + value, item + attribute), use a Markdown table:\n"
+        "   Example: | Name | Value |\n   |------|-------|\n   | A | B |\n\n"
+        "3. NEVER write lists as paragraphs. ALWAYS use bullets or tables for structured data.\n\n"
+        "Language rules:\n"
+        "- If the question is mostly in English, answer in English.\n"
+        "- If the question is mostly in Hindi (Devanagari), answer in Hindi.\n"
+        "- If the question is in Hinglish (Hindi written with English/Latin letters or a clear Hindi–English mix), "
+        "answer in Hinglish: Hindi sentences but written in English letters.\n\n"
+        "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:"
+=======
         "You are a helpful assistant for PDF Q&A. Answer questions based ONLY on the provided context.\n\n"
         "CRITICAL LANGUAGE RULE:\n"
         "- If the question is in Hindi (Devanagari script), answer ONLY in Hindi.\n"
@@ -56,6 +109,7 @@ QA_PROMPT = PromptTemplate(
         "Context:\n{context}\n\n"
         "Question: {question}\n\n"
         "Answer:"
+>>>>>>> 22689a82a2295908b378a7a65ba976753d0dd50f
     ),
 )
 
@@ -87,48 +141,6 @@ def clean_answer(answer: str) -> str:
         return answer
     
     answer = answer.strip()
-    
-    import re
-    
-    # Remove meta-commentary patterns (English and Hindi) - but be careful not to remove too much
-    meta_patterns = [
-        r"^The answer is\s*[:\-]?\s*",
-        r"^According to the context[,\s]*",
-        r"^Based on the provided context[,\s]*",
-        r"^The information provided indicates that\s*",
-        r"^Note:\s*",
-        r"^Note that\s*",
-        r"^उत्तर यह है\s*[:\-]?\s*",
-        r"^संदर्भ के अनुसार[,\s]*",
-        r"^प्रदान किए गए संदर्भ के आधार पर[,\s]*",
-        r"^सूचना से पता चलता है कि\s*",
-        r"^ध्यान दें:\s*",
-        r"^This work proposes\s*",
-        r"^The question asks\s*",
-        r"^The answer provided is\s*",
-    ]
-    
-    for pattern in meta_patterns:
-        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.MULTILINE)
-    
-    # Remove explanations that start with "The answer is found in..." or similar (only at start)
-    explanation_patterns = [
-        r"^The answer is found in.*?\.\s*",
-        r"^The question asks about.*?\.\s*",
-        r"^Note:.*?\.\s*",
-        r"^Note that.*?\.\s*",
-    ]
-    for pattern in explanation_patterns:
-        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.DOTALL | re.MULTILINE)
-    
-    # Remove trailing explanations
-    trailing_explanations = [
-        r"\s*The answer is found in Section \d+.*$",
-        r"\s*Note:.*$",
-        r"\s*Note that.*$",
-    ]
-    for pattern in trailing_explanations:
-        answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.DOTALL)
     
     # Remove common question format phrases (Hindi and English)
     question_format_phrases = [
