@@ -39,7 +39,13 @@ function ChatInput({ onSubmit, isLoading }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type your question in English/Hindi/Hinglish..."
-          className="w-full p-3 pr-10 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          className="w-full p-3 pr-10 resize-none rounded-lg
+            bg-white dark:bg-gray-800
+            text-gray-900 dark:text-gray-100
+            placeholder-gray-400 dark:placeholder-gray-500
+            border border-gray-300 dark:border-gray-600
+            focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+            transition-colors duration-300"
           rows={1}
           disabled={isLoading}
         />
@@ -49,7 +55,7 @@ function ChatInput({ onSubmit, isLoading }) {
         
         type="submit"
         disabled={!input.trim() || isLoading}
-        className="p-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors "
+        className="p-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 "
       >
         {isLoading ? (
           <Loader2 className="w-5 h-5 animate-spin" />

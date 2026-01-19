@@ -5,249 +5,127 @@ import {
   Trash2,
   CheckCircle,
   AlertCircle,
-  Pin,
-  PinOff
+  Sun,
+  Moon
 } from 'lucide-react'
 
-const SIDEBAR_WIDTH = '20rem' // 320px
+const SIDEBAR_WIDTH = '20rem'
 
-function Sidebar({ isOpen, onClose, onUpload, onClear, onClearChat, status, isLoading }) {
+function Sidebar({ isOpen = true, onUpload, onClear, onClearChat, status = { document_count: 0 }, isLoading }) {
   const [file, setFile] = useState(null)
   const [clearExisting, setClearExisting] = useState(false)
   const [uploadStatus, setUploadStatus] = useState(null)
-  const [isPinned, setIsPinned] = useState(false)
+  const [theme, setTheme] = useState('light')
 
-  const shouldBeOpen = isOpen || isPinned
-
-  // Shift chat window when sidebar is open (ChatGPT-style)
+  // Sidebar shift
   useEffect(() => {
-    const root = document.documentElement
-    root.style.setProperty(
+    document.documentElement.style.setProperty(
       '--sidebar-offset',
-      shouldBeOpen ? SIDEBAR_WIDTH : '0px'
+      isOpen ? SIDEBAR_WIDTH : '0px'
     )
+  }, [isOpen])
 
-    return () => {
-      root.style.setProperty('--sidebar-offset', '0px')
-    }
-  }, [shouldBeOpen])
+  // Theme init (local + system)
+  useEffect(() => {
+    const saved = localStorage.getItem('theme')
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const final = saved || (systemDark ? 'dark' : 'light')
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0]
-    if (selectedFile && selectedFile.type === 'application/pdf') {
-      setFile(selectedFile)
-      setUploadStatus(null)
-    } else {
-      setUploadStatus({ success: false, message: 'Please select a PDF file' })
-    }
-  }
+    setTheme(final)
+    document.documentElement.classList.toggle('dark', final === 'dark')
+  }, [])
 
-  const handleUpload = async () => {
-    if (!file) {
-      setUploadStatus({ success: false, message: 'Please select a file' })
-      return
-    }
-
-    setUploadStatus({ success: null, message: 'Uploading...' })
-    const result = await onUpload(file, clearExisting)
-    setUploadStatus(result)
-
-    if (result.success) {
-      setFile(null)
-      setClearExisting(false)
-      const fileInput = document.getElementById('pdf-upload')
-      if (fileInput) fileInput.value = ''
-    }
-  }
-
-  // Sidebar closes only if NOT pinned
-  const handleClose = () => {
-    if (!isPinned) {
-      onClose()
-    }
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light'
+    setTheme(next)
+    localStorage.setItem('theme', next)
+    document.documentElement.classList.toggle('dark', next === 'dark')
   }
 
   return (
-    <>
-      {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 w-80 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out ${
-          shouldBeOpen ? 'translate-x-0' : '-translate-x-full'
-        } flex flex-col`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                  />
-                </svg>
-              </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-800">Multilingual AI</h2>
-              <p className="text-xs text-gray-500">Document Q&A</p>
-            </div>
-          </div>
+    <div
+      className={`fixed inset-y-0 left-0 w-80 
+      bg-white/90 dark:bg-gray-900/90 backdrop-blur-md
+      border-r border-gray-200 dark:border-gray-800
+      z-50 transform transition-all duration-300
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      flex flex-col`}
+    >
+      {/* Header */}
+      <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white">Multilingual AI</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Document Q&A</p>
+        </div>
 
-          {/* Pin Button (Only control inside sidebar now) */}
-          <button
-            onClick={() => setIsPinned(!isPinned)}
-            title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-            className={`p-2 rounded-lg transition-colors ${
-              isPinned
-                ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                : 'hover:bg-gray-100'
-            }`}
-          >
-            {isPinned ? <PinOff className="w-5 h-5" /> : <Pin className="w-5 h-5" />}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800"
+        >
+          {theme === 'dark'
+            ? <Sun className="w-5 h-5 text-yellow-400" />
+            : <Moon className="w-5 h-5 text-gray-700 dark:text-gray-300" />}
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+
+        {/* Status */}
+        <div>
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-2 flex gap-2">
+            <FileText size={18} /> Status
+          </h3>
+
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            {status.document_count > 0 ? (
+              <div className="text-green-600 flex gap-2 items-center">
+                <CheckCircle size={18} />
+                {status.document_count} chunks ingested
+              </div>
+            ) : (
+              <div className="text-amber-600 flex gap-2 items-center">
+                <AlertCircle size={18} /> No documents loaded
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Upload */}
+        <div>
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-2 flex gap-2">
+            <Upload size={18} /> Upload PDF
+          </h3>
+
+          <input
+            type="file"
+            accept=".pdf"
+            className="w-full text-sm text-gray-600 dark:text-gray-300 
+              file:bg-primary file:text-white file:border-0 file:px-4 file:py-2 file:rounded-lg"
+          />
+
+          <label className="flex gap-2 mt-3 text-gray-700 dark:text-gray-300">
+            <input type="checkbox" />
+            Clear existing documents
+          </label>
+
+          <button className="w-full mt-3 bg-primary text-white py-2 rounded-lg hover:bg-primary/90">
+            Upload & Ingest
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {/* Status */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Status
-            </h3>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              {status.document_count > 0 ? (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="w-5 h-5" />
-                  <span className="truncate">
-                    {status.document_name ||
-                      `${status.document_count} chunks ingested`}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-amber-600">
-                  <AlertCircle className="w-5 h-5" />
-                  <span>No documents loaded</span>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Clear */}
+        <div>
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-2 flex gap-2">
+            <Trash2 size={18} /> Clear
+          </h3>
 
-          {/* Upload */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              Upload PDF
-            </h3>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select PDF File
-                </label>
-                <input
-                  id="pdf-upload"
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
-                  disabled={isLoading}
-                />
-                {file && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    Selected: {file.name}
-                  </p>
-                )}
-              </div>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={clearExisting}
-                  onChange={(e) => setClearExisting(e.target.checked)}
-                  className="rounded border-gray-300 text-primary focus:ring-primary"
-                  disabled={isLoading}
-                />
-                <span className="text-sm text-gray-700">
-                  Clear existing documents before upload
-                </span>
-              </label>
-
-              <button
-                onClick={handleUpload}
-                disabled={!file || isLoading}
-                className="w-full py-2 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    Upload & Ingest
-                  </>
-                )}
-              </button>
-
-              {uploadStatus && (
-                <div
-                  className={`p-3 rounded-lg text-sm ${
-                    uploadStatus.success === true
-                      ? 'bg-green-50 text-green-700'
-                      : uploadStatus.success === false
-                      ? 'bg-red-50 text-red-700'
-                      : 'bg-blue-50 text-blue-700'
-                  }`}
-                >
-                  {uploadStatus.message}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Clear */}
-          <div className="space-y-2">
-            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-              <Trash2 className="w-5 h-5" />
-              Clear
-            </h3>
-
-            <div className="space-y-2">
-              <button
-                onClick={onClear}
-                disabled={isLoading || status.document_count === 0}
-                className="w-full py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Clear All Documents
-              </button>
-
-              {onClearChat && (
-                <button
-                  onClick={onClearChat}
-                  disabled={isLoading}
-                  className="w-full py-2 px-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Clear Chat History
-                </button>
-              )}
-            </div>
-          </div>
+          <button className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600">
+            Clear All Documents
+          </button>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

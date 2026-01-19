@@ -111,7 +111,7 @@ function App() {
 
         isLoading={isUploading}
       />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <ChatInterface
           messages={messages}
           onAsk={handleAsk}
