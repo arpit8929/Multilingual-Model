@@ -1,16 +1,33 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production
+/dist
+/build
+
+# Vite
+.vite/
+vite.config.*.timestamp-*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Logs
-logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
+.pnpm-debug.log*
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +39,35 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+chroma_db/
+models/
+*.gguf
+*.pdf
+*.db
+
+*.log
+chat_history.json
+
+.venv/
+venv/
+ENV/
+env/
+
+_pycache_/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
