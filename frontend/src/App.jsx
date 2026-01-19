@@ -112,7 +112,7 @@ function App() {
           messages={messages}
           onAsk={handleAsk}
           isLoading={isLoading}
-          onMenuClick={() => setSidebarOpen(true)}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />
       </div>
     </div>
