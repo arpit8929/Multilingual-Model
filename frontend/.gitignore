@@ -63,7 +63,7 @@ venv/
 ENV/
 env/
 
-_pycache_/
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
