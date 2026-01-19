@@ -24,12 +24,16 @@ function ChatInterface({ messages, onAsk, isLoading, onMenuClick }) {
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
 
-      <div className="flex items-center justify-between p-4 border-b bg-white shadow-sm z-10">
+      <div className="flex items-center justify-between p-4 border-b bg-white shadow-sm z-10 relative">
         <div className="flex items-center gap-3">
           <button
-            onClick={onMenuClick}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors z-20 relative"
+            onClick={(e) => {
+              e.stopPropagation()
+              onMenuClick()
+            }}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative z-30"
             aria-label="Menu"
+            type="button"
           >
             <Menu className="w-5 h-5" />
           </button>
