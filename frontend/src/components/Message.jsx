@@ -8,7 +8,13 @@ function Message({ message }) {
   const isUser = message.role === 'user'
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex items-start gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {!isUser && (
+        <div className="w-8 h-8 flex items-center justify-center text-gray-700 text-sm font-bold">
+          🤖
+        </div>
+      )}
+
       <div
         className={`max-w-[80%] rounded-lg p-4 ${
           isUser
@@ -73,6 +79,11 @@ function Message({ message }) {
           </div>
         )}
       </div>
+      {isUser && (
+        <div className="w-8 h-8 flex items-center justify-center text-white text-sm font-bold">
+          👤
+        </div>
+      )}
     </div>
   )
 }
