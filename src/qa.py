@@ -14,6 +14,14 @@ QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template=(
 
+        "You are a helpful AI assistant. Use the context below to answer the question.\n\n"
+
+        "Context:\n"
+        "{context}\n\n"
+
+        "Question:\n"
+        "{question}\n\n"
+
         "Answering rules:\n"
         "- Answer exactly what is asked. If the question specifies criteria (location, date, category, etc.), "
         "only include items that match those criteria exactly.\n"
@@ -30,29 +38,22 @@ QA_PROMPT = PromptTemplate(
         "  * Look at the table/data structure. Each row typically has: Company Name | Location/Address\n"
         "  * Check the Location/Address column of EACH row individually.\n"
         "  * ONLY include companies where the Location/Address column explicitly mentions the requested city.\n"
-        "  * If a company's location mentions a different city (e.g., Bengaluru, Mumbai, Ahmedabad when asked for Gandhinagar), EXCLUDE it.\n"
-        "  * Do NOT include companies just because they appear in the same chunk - verify each one's location.\n"
+        "  * If a company's location mentions a different city, EXCLUDE it.\n"
         "- Be precise and do not include irrelevant information. Do not guess or assume.\n\n"
+
         "Quality rules - CRITICAL:\n"
-        "- Provide COMPLETE answers. Ensure your answer ends with a complete sentence, not mid-sentence.\n"
-        "- Avoid repetition. Do not repeat the same information multiple times in different ways.\n"
-        "- Be concise but comprehensive. Cover all key points from the context without being verbose.\n"
-        "- Structure your answer logically:\n"
-        "  1. Start with a direct answer to the question\n"
-        "  2. Provide supporting details and explanations\n"
-        "  3. Conclude with a summary if the answer is long\n"
-        "- When explaining any concept/term or answering \"how\" questions, include:\n"
-        "  * A clear definition or meaning (if applicable)\n"
-        "  * The process, mechanism, or method (for \"how\" questions)\n"
-        "  * Key characteristics or components\n"
-        "  * Examples or specific ways it happens (if mentioned in context)\n"
-        "  * Why it matters (if mentioned in the context)\n"
-        "- Keep answers concise (ideally 1-3 sentences). If the answer is not explicitly supported by context, say \"I do not know\".\n"
-        "- Do NOT cut off mid-sentence. Always complete your thoughts.\n"
-        "- Provide a natural, flowing answer as if explaining to someone, not copying from a question paper.\n\n"
-        "Formatting rules - ALWAYS FOLLOW:\n"
+        "- Provide COMPLETE answers. Ensure your answer ends with a complete sentence.\n"
+        "- Avoid repetition. Do not repeat the same information multiple times.\n"
+        "- Be concise but comprehensive.\n"
+        "- If the answer is not explicitly supported by context, say \"I do not know\".\n\n"
+
+        "Formatting rules:\n"
         "1. For lists of multiple items, ALWAYS use bullet points:\n"
-        "   Example: - Item 1\n   - Item 2\n   - Item 3\n\n"
+        "   - Item 1\n"
+        "   - Item 2\n"
+        "   - Item 3\n\n"
+
+        "Final Answer:"
     ),
 )
 

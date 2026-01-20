@@ -42,6 +42,26 @@ function Sidebar({ isOpen = true, onUpload, onClear, onClearChat, status = { doc
     document.documentElement.classList.toggle('dark', next === 'dark')
   }
 
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0]
+    if (selectedFile) {
+      setFile(selectedFile)
+      setUploadStatus(null)
+    }
+  }
+  
+  const handleUpload = async () => {
+    if (!file) {
+      setUploadStatus({ success: false, message: 'Please select a PDF file' })
+      return
+    }
+  
+    setUploadStatus({ success: null, message: 'Uploading...' })
+  
+    const result = await onUpload(file, clearExisting)
+    setUploadStatus(result)
+  }
+  
   return (
     <div
       className={`fixed inset-y-0 left-0 w-80 
@@ -100,29 +120,57 @@ function Sidebar({ isOpen = true, onUpload, onClear, onClearChat, status = { doc
           <input
             type="file"
             accept=".pdf"
+            onChange={handleFileChange}
             className="w-full text-sm text-gray-600 dark:text-gray-300 
-              file:bg-primary file:text-white file:border-0 file:px-4 file:py-2 file:rounded-lg"
+    file:bg-primary file:text-white file:border-0 file:px-4 file:py-2 file:rounded-lg"
           />
 
+
           <label className="flex gap-2 mt-3 text-gray-700 dark:text-gray-300">
-            <input type="checkbox" />
+            <input
+              type="checkbox"
+              checked={clearExisting}
+              onChange={(e) => setClearExisting(e.target.checked)}
+            />
+
             Clear existing documents
           </label>
 
-          <button className="w-full mt-3 bg-primary text-white py-2 rounded-lg hover:bg-primary/90">
+          <button
+            onClick={handleUpload}
+            className="w-full mt-3 bg-primary text-white py-2 rounded-lg hover:bg-primary/90"
+          >
             Upload & Ingest
           </button>
+
         </div>
 
         {/* Clear */}
-        <div>
-          <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-2 flex gap-2">
-            <Trash2 size={18} /> Clear
+        <div className="space-y-2">
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+            <Trash2 className="w-5 h-5" />
+            Clear
           </h3>
 
-          <button className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600">
+          {/* Clear Documents */}
+          <button
+            onClick={onClear}
+            disabled={isLoading || status.document_count === 0}
+            className="w-full py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
             Clear All Documents
           </button>
+
+          {/* ✅ Restore Clear Chat */}
+          {onClearChat && (
+            <button
+              onClick={onClearChat}
+              disabled={isLoading}
+              className="w-full py-2 px-4 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              Clear Chat History
+            </button>
+          )}
         </div>
       </div>
     </div>

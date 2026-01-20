@@ -7,19 +7,25 @@ function ChatInput({ onSubmit, isLoading }) {
 
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      const el = textareaRef.current
+  
+      el.style.height = 'auto'
+  
+      const maxHeight = 160 // ≈ 5–6 lines (you can tweak)
+      const newHeight = Math.min(el.scrollHeight, maxHeight)
+  
+      el.style.height = `${newHeight}px`
+      el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
     }
   }, [input])
+  
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (input.trim() && !isLoading) {
       onSubmit(input)
       setInput('')
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
-      }
+      if (textareaRef.current) textareaRef.current.style.height = 'auto'
     }
   }
 
@@ -31,40 +37,63 @@ function ChatInput({ onSubmit, isLoading }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end gap-2">
-      <div className="flex-1 relative">
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your question in English/Hindi/Hinglish..."
-          className="w-full p-3 pr-10 resize-none rounded-lg
-            bg-white dark:bg-gray-800
-            text-gray-900 dark:text-gray-100
-            placeholder-gray-400 dark:placeholder-gray-500
-            border border-gray-300 dark:border-gray-600
-            focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-            transition-colors duration-300"
-          rows={1}
-          disabled={isLoading}
-        />
-      </div>
-      <div style={{ padding: '0px 0px 9px 2px' }}>
-      <button
+    <form onSubmit={handleSubmit} className="w-full">
+      {/* Gradient glow wrapper */}
+      <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-primary/60 via-blue-500/40 to-purple-500/60">
         
-        type="submit"
-        disabled={!input.trim() || isLoading}
-        className="p-3 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 "
-      >
-        {isLoading ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <Send className="w-5 h-5" />
-        )}
-      </button>
+        {/* Actual input container */}
+        <div className="
+          flex items-center gap-3
+          bg-white dark:bg-gray-900
+          rounded-2xl
+          px-4 py-3
+          shadow-xl
+          transition-all duration-300
+        ">
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask something smart..."
+            rows={1}
+            disabled={isLoading}
+            className="
+              flex-1 bg-transparent resize-none outline-none
+              text-gray-900 dark:text-gray-100
+              placeholder-gray-400 dark:placeholder-gray-500
+              text-base leading-relaxed
+              min-h-[24px]
+              max-h-[160px]
+              overflow-y-auto
+              scrollbar-thin
+            "
+          />
+
+          {/* Send Button */}
+          <button
+            type="submit"
+            disabled={!input.trim() || isLoading}
+            className="
+              p-3 rounded-xl
+              bg-gradient-to-br from-primary to-emerald-500
+              text-white
+              shadow-lg
+              hover:scale-105
+              active:scale-95
+              transition-all duration-200
+              disabled:opacity-40 disabled:cursor-not-allowed
+            "
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
-      
     </form>
   )
 }
