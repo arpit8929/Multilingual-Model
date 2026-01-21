@@ -20,6 +20,32 @@ from tqdm import tqdm
 from src.config import settings
 from src.vector_store import VectorStore
 
+def extract_title_from_first_page(doc):
+    """
+    Extract document title from the first page using layout heuristics.
+    """
+    page = doc[0]
+    blocks = page.get_text("blocks")
+
+    # Sort text blocks top-to-bottom
+    blocks = sorted(blocks, key=lambda b: b[1])
+
+    for block in blocks:
+        text = block[4].strip()
+
+        # Skip very small text
+        if len(text) < 10:
+            continue
+
+        # Heuristic 1: ALL CAPS titles
+        if text.isupper():
+            return text
+
+        # Heuristic 2: First large meaningful line
+        if len(text) > 20:
+            return text
+
+    return None
 
 @dataclass
 class PageExtraction:
@@ -86,13 +112,28 @@ def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = Tru
 def extract_pdf(path: Path) -> List[PageExtraction]:
     doc = fitz.open(path)
     pages: List[PageExtraction] = []
-    for page in tqdm(doc, desc=f"Extracting {path.name}", unit="page"):
+    
+    title = extract_title_from_first_page(doc)
+
+    for idx, page in enumerate(tqdm(doc, desc=f"Extracting {path.name}", unit="page")):
         text = page.get_text("text") or ""
         table_dfs = _extract_tables(page)
         tables_csv = [df.to_csv(index=False) for df in table_dfs]
         ocr_text = _ocr_page(page)
-        pages.append(PageExtraction(text=text, tables=tables_csv, ocr_text=ocr_text))
+
+        if idx == 0 and title:
+            text = f"Document Title: {title}\n\n{text}"
+
+        pages.append(
+            PageExtraction(
+                text=text,
+                tables=tables_csv,
+                ocr_text=ocr_text
+            )
+        )
+
     return pages
+
 
 
 def build_documents(pages: List[PageExtraction], source: str) -> List[Document]:

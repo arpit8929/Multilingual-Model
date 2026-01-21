@@ -12,7 +12,6 @@ warnings.filterwarnings("ignore", message=".*ClientCreateCollectionEvent.*")
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
 from langchain_community.vectorstores import Chroma
-
 from src.config import settings
 
 

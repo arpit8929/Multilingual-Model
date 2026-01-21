@@ -3,7 +3,7 @@ import os
 import tempfile
 import warnings
 from pathlib import Path
-
+import re
 import streamlit as st
 
 # Suppress warnings and telemetry errors
@@ -16,6 +16,12 @@ from src.ingest import ingest_file
 from src.qa import build_chain, clean_answer
 from src.vector_store import VectorStore
 
+def detect_language(text: str) -> str:
+    if re.search(r'[\u0900-\u097F]', text):
+        return "hindi"
+    if any(word in text.lower() for word in ["kya", "ka", "ki", "hai", "ko", "me", "se"]):
+        return "hinglish"
+    return "english"
 
 st.set_page_config(
     page_title="QnA Assistant",
@@ -231,8 +237,18 @@ if prompt:
                     response = st.session_state.qa_chain.invoke({"query": prompt})
                     status_text.empty()  # Clear status
                     
-                    raw_answer = response.get("result", "")
+                    raw_answer = response.get("result", "").strip()
                     source_docs = response.get("source_documents", [])
+
+                    lang = detect_language(question)
+
+                    if raw_answer == "NOT_FOUND":
+                        if lang == "hindi":
+                            answer = "उत्तर संदर्भ में नहीं मिला"
+                        else:
+                            answer = "Answer not found in context"
+                    else:
+                        answer = clean_answer(raw_answer)
                     
                     # Check if answer is empty
                     if not raw_answer or not raw_answer.strip():
