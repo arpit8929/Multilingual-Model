@@ -1,14 +1,11 @@
 import re
 from pathlib import Path
 from typing import Optional
-
 from langchain.chains import RetrievalQA
 from langchain_community.llms import LlamaCpp
 from langchain.prompts import PromptTemplate
-
 from src.config import settings
 from src.vector_store import VectorStore
-
 
 QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
@@ -26,6 +23,13 @@ QA_PROMPT = PromptTemplate(
         "- Do NOT mix languages under any circumstance."
         "- If you violate this rule, the answer is considered incorrect."
 
+        "STRUCTURE-LOCK RULE (MANDATORY):"
+        "- If the question asks for a list, category, or definition (e.g., technology stack, components, steps), extract the answer ONLY from:"
+            "- Tables"
+            "- Bullet lists"
+            "- Clearly labeled sections defining that category"
+        "- Do NOT collect items scattered across the document."
+        "- Ignore future work, discussion, references, or implementation notes unless explicitly labeled as part of the category."
 
         "HOW TO READ THE CONTEXT:\n"
         "- First, locate the part of the context that directly relates to the question.\n"
@@ -35,7 +39,11 @@ QA_PROMPT = PromptTemplate(
         "- Some concepts may be described indirectly using related terms (e.g., preprocessing, data preparation, batching)."
         "- If the question asks about a concept, include information that clearly refers to that concept even if the exact term is not used."
 
-    
+        "SECTION-AWARE EXTRACTION RULES:"
+        "- If the question refers to a specific topic (e.g., feature engineering, evaluation, architecture),first locate the section or heading in the context that matches the topic."
+        "- Extract information ONLY from the sentences or bullet points that appear directly under that heading."
+        "- Ignore model names, algorithms, or methods unless they are explicitly listed as steps, processes, or components under that section."
+        
         "DOCUMENT STRUCTURE HINTS:\n"
         "- The document title is usually found at the beginning of the document."
         "- Titles are often written in uppercase or appear as prominent headings."
@@ -45,6 +53,12 @@ QA_PROMPT = PromptTemplate(
         "- Titles often appear as prominent headings, sometimes in uppercase."
         "- Titles may appear before sections like “Abstract” or “Introduction”."
         "- If such a heading clearly names the document, treat it as the title."
+
+        "ANSWER MODE RULE (CRITICAL):"
+        "- If the question asks for “what are”, “list”, “key”, “technology stack”, or “processes”:"
+            "- Respond ONLY with extracted items from the context."
+            "- Do NOT explain, rephrase, summarize, or add commentary."
+            "- Do NOT describe roles or purposes unless explicitly asked."
 
         "ANSWERING RULES:\n"
         "- Use ONLY information that is present in the context.\n"
@@ -246,5 +260,5 @@ def build_chain(store: Optional[VectorStore] = None) -> RetrievalQA:
         chain_type="stuff",
         chain_type_kwargs={"prompt": QA_PROMPT},
         return_source_documents=True,
-    )
+    )   
 
