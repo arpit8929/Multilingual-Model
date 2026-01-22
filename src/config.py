@@ -2,6 +2,17 @@ from dataclasses import dataclass
 from pathlib import Path
 import os
 
+# Try to load .env file if dotenv is available
+try:
+    from dotenv import load_dotenv
+    # Load .env file if it exists
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    # dotenv not installed, will use environment variables directly
+    pass
+
 
 @dataclass
 class Settings:
