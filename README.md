@@ -36,10 +36,20 @@ End-to-end retrieval-augmented QA for Hindi, English, or Hinglish PDFs, includin
   ```
 - If Tesseract is not in PATH, note the installation directory (usually `C:\Program Files\Tesseract-OCR`)
 
-#### 1.3 Install Visual C++ Build Tools (Required for llama-cpp-python)
+#### 1.3 Install Visual C++ Build Tools (CRITICAL - Required for llama-cpp-python)
+
+**⚠️ This is REQUIRED for Windows users - do not skip this step!**
+
 - Download from [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
 - Install "Desktop development with C++" workload
-- Or install [Visual Studio Build Tools](https://aka.ms/vs/17/release/vs_buildtools.exe) with C++ components
+- Alternative: [Visual Studio Build Tools](https://aka.ms/vs/17/release/vs_buildtools.exe)
+
+**Why is this needed?** The `llama-cpp-python` package must be compiled from source on Windows, which requires C++ build tools.
+
+**Verification**: After installation, restart your terminal and try:
+```powershell
+cl  # Should show Microsoft C++ compiler version
+```
 
 ---
 
@@ -293,6 +303,89 @@ python verify_setup.py
 # Pre-ingest a PDF from command line
 python -m src.ingest --pdf path/to/file.pdf
 ```
+
+---
+
+## 🔧 Troubleshooting
+
+### "Failed building wheel for llama-cpp-python" Error
+
+**Symptoms**:
+```
+CMake Error: CMAKE_C_COMPILER not set, after EnableLanguage
+CMake Error: CMAKE_CXX_COMPILER not set, after EnableLanguage
+error: subprocess-exited-with-error
+× Building wheel for llama-cpp-python (pyproject.toml) did not run successfully.
+```
+
+**Solution**:
+1. Install Visual C++ Build Tools (see Prerequisites section above)
+2. Restart your terminal/command prompt completely
+3. Try installing again:
+   ```powershell
+   pip install llama-cpp-python --no-cache-dir
+   ```
+4. If still failing, try installing from a different source:
+   ```powershell
+   pip install llama-cpp-python --index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+   ```
+
+### "huggingface-cli not recognized" Error
+
+**Solution**:
+```powershell
+pip install huggingface_hub
+# Restart terminal, then try again
+huggingface-cli download bartowski/Llama-3.2-3B-Instruct-GGUF llama-3.2-3b-instruct-q4_K_S.gguf --local-dir models/
+```
+
+### "Tesseract not found" Error
+
+**Solution**:
+1. Verify Tesseract installation: `tesseract --version`
+2. If not found, reinstall from [UB Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki)
+3. Make sure "Add to PATH" was checked during installation
+4. Or set in `.env`: `TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe`
+
+### Virtual Environment Issues
+
+**"execution policy" error in PowerShell**:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Virtual environment not activating**:
+```powershell
+# Make sure you're in the project directory
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+### Model Download Issues
+
+**Slow download or timeout**:
+```powershell
+# Use a download manager or try:
+huggingface-cli download bartowski/Llama-3.2-3B-Instruct-GGUF llama-3.2-3b-instruct-q4_K_S.gguf --local-dir models/ --resume-download
+```
+
+**Alternative download methods**:
+- Direct link: `https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_S.gguf`
+- Use browser download or tools like `wget`/`curl`
+
+### Still Having Issues?
+
+Run the verification script with verbose output:
+```powershell
+python verify_setup.py --verbose
+```
+
+Or use auto-fix mode:
+```powershell
+python verify_setup.py --auto-fix --verbose
+```
+
+---
 
 ### Common Workflow
 
