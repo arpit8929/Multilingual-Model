@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 from typing import Optional
 from langchain.chains import RetrievalQA
+from langchain.chains import RetrievalQAWithSourcesChain
 from langchain_community.llms import LlamaCpp
 from langchain.prompts import PromptTemplate
 from src.config import settings
@@ -11,79 +12,21 @@ QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
     template=(
         "You are an accurate and careful assistant for PDF Question Answering.\n"
-        "Your task is to extract answers ONLY from the provided context.\n\n"
-
-        "LANGUAGE CONTROL (STRICT AND MANDATORY):"
-        "- The answer language MUST strictly follow the language of the question."
-        "- If the question is written fully in English, respond ONLY in English."
-        "- If the question is written fully in Hindi (Devanagari script), respond ONLY in Hindi."
-        "- If the question is written in Hinglish (Hindi words written using English letters or mixed Hindi–English), respond in Hinglish."
-        "- Do NOT translate."
-        "- Do NOT explain."
-        "- Do NOT mix languages under any circumstance."
-        "- If you violate this rule, the answer is considered incorrect."
-
-        "STRUCTURE-LOCK RULE (MANDATORY):"
-        "- If the question asks for a list, category, or definition (e.g., technology stack, components, steps), extract the answer ONLY from:"
-            "- Tables"
-            "- Bullet lists"
-            "- Clearly labeled sections defining that category"
-        "- Do NOT collect items scattered across the document."
-        "- Ignore future work, discussion, references, or implementation notes unless explicitly labeled as part of the category."
-
-        "HOW TO READ THE CONTEXT:\n"
-        "- First, locate the part of the context that directly relates to the question.\n"
-        "- Prefer exact matches (dates, names, headings, bullet points).\n"
-        "- If information is listed under a date, heading, or table row, treat it as a group.\n"
-        "- Ignore unrelated parts of the context.\n\n"
-        "- Some concepts may be described indirectly using related terms (e.g., preprocessing, data preparation, batching)."
-        "- If the question asks about a concept, include information that clearly refers to that concept even if the exact term is not used."
-
-        "SECTION-AWARE EXTRACTION RULES:"
-        "- If the question refers to a specific topic (e.g., feature engineering, evaluation, architecture),first locate the section or heading in the context that matches the topic."
-        "- Extract information ONLY from the sentences or bullet points that appear directly under that heading."
-        "- Ignore model names, algorithms, or methods unless they are explicitly listed as steps, processes, or components under that section."
         
-        "DOCUMENT STRUCTURE HINTS:\n"
-        "- The document title is usually found at the beginning of the document."
-        "- Titles are often written in uppercase or appear as prominent headings."
-        "- Titles may include date ranges or report names."
-        "- If a heading at the top of the document clearly represents the document name, treat it as the title."
-        "- A document title usually appears at the beginning of the document."
-        "- Titles often appear as prominent headings, sometimes in uppercase."
-        "- Titles may appear before sections like “Abstract” or “Introduction”."
-        "- If such a heading clearly names the document, treat it as the title."
-
-        "ANSWER MODE RULE (CRITICAL):"
-        "- If the question asks for “what are”, “list”, “key”, “technology stack”, or “processes”:"
-            "- Respond ONLY with extracted items from the context."
-            "- Do NOT explain, rephrase, summarize, or add commentary."
-            "- Do NOT describe roles or purposes unless explicitly asked."
-
-        "ANSWERING RULES:\n"
-        "- Use ONLY information that is present in the context.\n"
-        "- Do NOT invent missing details.\n"
-        "- Do NOT assume information that is not written.\n"
-        "- If multiple relevant items exist, list ALL of them.\n"
-        "- Be concise and factual.\n"
-        "- Do NOT repeat the question.\n"
-        "- Do NOT add explanations or meta-commentary.\n\n"
-
-        "WHEN ANSWER IS NOT FOUND:"
-        "- If the answer is not explicitly present in the context, reply with exactly:NOT_FOUND"
-        "- Do NOT explain why."
-        "- Do NOT justify."
-        "- Do NOT mention any other papers."
-        "- Do NOT guess or infer."
-
-        "FORMATTING:\n"
-        "- Use bullet points for lists.\n"
-        "- Use tables when the context is tabular.\n"
-        "- Use the same wording as the context whenever possible.\n\n"
-
+        "RULES (follow strictly):\n"
+        "- Answer ONLY using the information in the provided context.\n"
+        "- Do NOT use outside knowledge.\n"
+        "- Do NOT guess.\n"
+        "- If the answer is not clearly present, say exactly:\n"
+        "  I do not know based on the provided document.\n"
+        "- If the document lists multiple points, you MUST return ALL points.\n"
+        "- If fewer points are present, say: Only X points are mentioned in the document.\n"
+        "- Always return the answer in structured bullet points.\n\n"
+        
         "Context:\n{context}\n\n"
         "Question:\n{question}\n\n"
         "Answer:"
+
     ),
 )
 
@@ -98,6 +41,7 @@ def load_llm(model_path: Path | str | None = None) -> LlamaCpp:
         temperature=settings.temperature,
         f16_kv=True,
         verbose=False,
+        stop=["Question:", "Context:", "\n\n\n"]
     )
 
 
