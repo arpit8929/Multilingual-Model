@@ -15,17 +15,13 @@ from src.ingest import ingest_file
 from src.qa import build_chain, clean_answer
 from src.vector_store import VectorStore
 
-# -------------------------
 # Utility Functions
-# -------------------------
-
 def detect_language(text: str) -> str:
     if re.search(r'[\u0900-\u097F]', text):
         return "hindi"
     if any(w in text.lower() for w in ["kya", "ka", "ki", "hai", "ko", "me", "se"]):
         return "hinglish"
     return "english"
-
 
 def answer_supported_by_sources(answer: str, source_docs: list) -> bool:
     """
@@ -43,11 +39,6 @@ def answer_supported_by_sources(answer: str, source_docs: list) -> bool:
 
     # Require meaningful lexical overlap
     return len(answer_tokens.intersection(context_tokens)) >= 2
-
-
-# -------------------------
-# Streamlit Setup
-# -------------------------
 
 st.set_page_config(
     page_title="Multilang QnA Assistant",
@@ -75,10 +66,7 @@ def save_chat_history(messages):
         encoding="utf-8",
     )
 
-# -------------------------
 # Initialize State
-# -------------------------
-
 if "store" not in st.session_state:
     st.session_state.store = VectorStore()
 
@@ -88,10 +76,7 @@ if "qa_chain" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = load_chat_history()
 
-# -------------------------
 # Sidebar – Upload
-# -------------------------
-
 with st.sidebar:
     st.header("📄 Upload PDF")
     clear_before_upload = st.checkbox("Clear existing documents before upload", value=False)
@@ -118,10 +103,7 @@ with st.sidebar:
         save_chat_history([])
         st.rerun()
 
-# -------------------------
 # Chat History Display
-# -------------------------
-
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -138,10 +120,7 @@ for msg in st.session_state.messages:
                         key=f"src_{hash(str(d))}_{i}",
                     )
 
-# -------------------------
 # Chat Input
-# -------------------------
-
 prompt = st.chat_input("Ask a question…")
 
 if prompt:

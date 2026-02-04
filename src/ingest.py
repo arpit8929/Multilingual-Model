@@ -3,6 +3,9 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
+from transformers import AutoProcessor, AutoModelForImageTextToText
+import torch
+
 
 # Suppress warnings
 warnings.filterwarnings("ignore", message=".*torch.classes.*")
@@ -19,6 +22,29 @@ from tqdm import tqdm
 
 from src.config import settings
 from src.vector_store import VectorStore
+
+_LIGHTON_PROCESSOR = None
+_LIGHTON_MODEL = None
+
+def _load_lighton_ocr():
+    global _LIGHTON_PROCESSOR, _LIGHTON_MODEL
+
+    if _LIGHTON_PROCESSOR is None or _LIGHTON_MODEL is None:
+        model_id = "lightonai/LightOnOCR-2-1B"
+
+        _LIGHTON_PROCESSOR = AutoProcessor.from_pretrained(model_id)
+
+        _LIGHTON_MODEL = AutoModelForImageTextToText.from_pretrained(
+            model_id,
+            dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            device_map="auto"
+        )
+
+        _LIGHTON_MODEL.eval()
+
+    return _LIGHTON_PROCESSOR, _LIGHTON_MODEL
+
+
 
 def extract_title_from_first_page(doc):
     """
@@ -90,23 +116,64 @@ def _preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
 
 
 def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = True) -> str:
-    """OCR a page image with enhanced preprocessing for handwritten/scanned PDFs.
-    
-    Args:
-        page: PyMuPDF page object
-        scale: Resolution scale (higher = better quality, slower). Use 3.0+ for handwritten text.
-        use_preprocessing: Apply image enhancement for better OCR accuracy
     """
-    mat = fitz.Matrix(scale, scale)
-    pix = page.get_pixmap(matrix=mat)
-    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-    
-    if use_preprocessing:
-        img = _preprocess_image_for_ocr(img)
-    
-    # Use Tesseract with Hindi+English and better config for handwritten text
-    custom_config = r'--oem 3 --psm 6'  # OCR Engine Mode 3, Page Segmentation Mode 6 (uniform block)
-    return pytesseract.image_to_string(img, lang=settings.ocr_lang, config=custom_config)
+    OCR a page image using LightOnOCR-2-1B.
+    Falls back to Tesseract if the model fails.
+    """
+
+    try:
+        processor, model = _load_lighton_ocr()
+
+        mat = fitz.Matrix(scale, scale)
+        pix = page.get_pixmap(matrix=mat)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+        if use_preprocessing:
+            img = _preprocess_image_for_ocr(img)
+
+        # LightOnOCR expects an image + instruction
+        prompt = "Extract all readable text from this image."
+
+        inputs = processor(
+            images=img,
+            text=prompt,
+            return_tensors="pt"
+        )
+
+        if torch.cuda.is_available():
+            inputs = {k: v.to(model.device) for k, v in inputs.items()}
+
+        with torch.no_grad():
+            generated_ids = model.generate(
+                **inputs,
+                max_new_tokens=512
+            )
+
+        text = processor.batch_decode(
+            generated_ids,
+            skip_special_tokens=True
+        )[0]
+
+        return text.strip()
+
+    except Exception as e:
+        # IMPORTANT: fallback so your API never returns 500
+        try:
+            mat = fitz.Matrix(scale, scale)
+            pix = page.get_pixmap(matrix=mat)
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+            if use_preprocessing:
+                img = _preprocess_image_for_ocr(img)
+
+            custom_config = r'--oem 3 --psm 6'
+            return pytesseract.image_to_string(
+                img,
+                lang=settings.ocr_lang,
+                config=custom_config
+            )
+        except Exception:
+            return ""
 
 
 def extract_pdf(path: Path) -> List[PageExtraction]:
