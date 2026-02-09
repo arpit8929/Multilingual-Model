@@ -153,7 +153,8 @@ def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = Tru
             generated_ids,
             skip_special_tokens=True
         )[0]
-
+        
+        print("[OCR] LightOnOCR used")
         return text.strip()
 
     except Exception as e:
@@ -167,6 +168,8 @@ def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = Tru
                 img = _preprocess_image_for_ocr(img)
 
             custom_config = r'--oem 3 --psm 6'
+            print("[OCR] LightOnOCR failed:", type(e).__name__, e)
+            print("[OCR] Tesseract fallback used")
             return pytesseract.image_to_string(
                 img,
                 lang=settings.ocr_lang,
