@@ -10,7 +10,6 @@ import warnings
 from pathlib import Path
 from typing import List, Optional
 
-
 # Add parent directory to Python path to import src modules
 backend_dir = Path(__file__).parent
 project_root = backend_dir.parent
