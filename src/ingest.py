@@ -3,8 +3,10 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
-from transformers import AutoProcessor, AutoModelForImageTextToText
-import torch
+from huggingface_hub.utils import HfHubHTTPError
+from paddleocr import PaddleOCR
+import cv2
+import numpy as np
 
 
 # Suppress warnings
@@ -23,26 +25,21 @@ from tqdm import tqdm
 from src.config import settings
 from src.vector_store import VectorStore
 
-_LIGHTON_PROCESSOR = None
-_LIGHTON_MODEL = None
+_PADDLE_OCR_EN = None
+_PADDLE_OCR_HI = None
 
-def _load_lighton_ocr():
-    global _LIGHTON_PROCESSOR, _LIGHTON_MODEL
 
-    if _LIGHTON_PROCESSOR is None or _LIGHTON_MODEL is None:
-        model_id = "lightonai/LightOnOCR-2-1B"
+def _load_paddle_ocr():
+    global _PADDLE_OCR_EN, _PADDLE_OCR_HI
 
-        _LIGHTON_PROCESSOR = AutoProcessor.from_pretrained(model_id)
+    if _PADDLE_OCR_EN is None:
+        _PADDLE_OCR_EN = PaddleOCR(use_angle_cls=True, lang="en")
 
-        _LIGHTON_MODEL = AutoModelForImageTextToText.from_pretrained(
-            model_id,
-            dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-            device_map="auto"
-        )
+    if _PADDLE_OCR_HI is None:
+        _PADDLE_OCR_HI = PaddleOCR(use_angle_cls=True, lang="hi")
 
-        _LIGHTON_MODEL.eval()
+    return _PADDLE_OCR_EN, _PADDLE_OCR_HI
 
-    return _LIGHTON_PROCESSOR, _LIGHTON_MODEL
 
 
 
@@ -117,66 +114,47 @@ def _preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
 
 def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = True) -> str:
     """
-    OCR a page image using LightOnOCR-2-1B.
-    Falls back to Tesseract if the model fails.
+    OCR using PaddleOCR (English + Hindi).
     """
 
+    ocr_en, ocr_hi = _load_paddle_ocr()
+
+    mat = fitz.Matrix(scale, scale)
+    pix = page.get_pixmap(matrix=mat)
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+    if use_preprocessing:
+        img = _preprocess_image_for_ocr(img)
+
+    img_np = np.array(img)
+    img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+
+    texts = []
+
+    # English OCR
     try:
-        processor, model = _load_lighton_ocr()
-
-        mat = fitz.Matrix(scale, scale)
-        pix = page.get_pixmap(matrix=mat)
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-
-        if use_preprocessing:
-            img = _preprocess_image_for_ocr(img)
-
-        # LightOnOCR expects an image + instruction
-        prompt = "Extract all readable text from this image."
-
-        inputs = processor(
-            images=img,
-            text=prompt,
-            return_tensors="pt"
-        )
-
-        if torch.cuda.is_available():
-            inputs = {k: v.to(model.device) for k, v in inputs.items()}
-
-        with torch.no_grad():
-            generated_ids = model.generate(
-                **inputs,
-                max_new_tokens=512
-            )
-
-        text = processor.batch_decode(
-            generated_ids,
-            skip_special_tokens=True
-        )[0]
-        
-        print("[OCR] LightOnOCR used")
-        return text.strip()
-
+        result_en = ocr_en.ocr(img_np, cls=True)
+        if result_en:
+            for line in result_en[0]:
+                texts.append(line[1][0])
+        print("[OCR] PaddleOCR English used")
     except Exception as e:
-        # IMPORTANT: fallback so your API never returns 500
-        try:
-            mat = fitz.Matrix(scale, scale)
-            pix = page.get_pixmap(matrix=mat)
-            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        print("[OCR] English OCR error:", e)
 
-            if use_preprocessing:
-                img = _preprocess_image_for_ocr(img)
+    # Hindi OCR
+    try:
+        result_hi = ocr_hi.ocr(img_np, cls=True)
+        if result_hi:
+            for line in result_hi[0]:
+                texts.append(line[1][0])
+        print("[OCR] PaddleOCR Hindi used")
+    except Exception as e:
+        print("[OCR] Hindi OCR error:", e)
 
-            custom_config = r'--oem 3 --psm 6'
-            print("[OCR] LightOnOCR failed:", type(e).__name__, e)
-            print("[OCR] Tesseract fallback used")
-            return pytesseract.image_to_string(
-                img,
-                lang=settings.ocr_lang,
-                config=custom_config
-            )
-        except Exception:
-            return ""
+    return "\n".join(texts).strip()
+
+
+
 
 
 def extract_pdf(path: Path) -> List[PageExtraction]:

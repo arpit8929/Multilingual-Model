@@ -19,8 +19,8 @@ llama-cpp-python==0.2.90
 pandas==2.2.2
 numpy==1.26.4
 tqdm==4.66.4
-transformers
-accelerate 
-torch
-torchvision
+torch 
+transformers==4.40.2
+paddleocr 
+paddlepaddle
 
