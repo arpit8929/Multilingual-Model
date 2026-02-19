@@ -7,6 +7,8 @@ from huggingface_hub.utils import HfHubHTTPError
 from paddleocr import PaddleOCR
 import cv2
 import numpy as np
+import os
+os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
 
 # Suppress warnings
@@ -25,9 +27,9 @@ from tqdm import tqdm
 from src.config import settings
 from src.vector_store import VectorStore
 
+
 _PADDLE_OCR_EN = None
 _PADDLE_OCR_HI = None
-
 
 def _load_paddle_ocr():
     global _PADDLE_OCR_EN, _PADDLE_OCR_HI
@@ -39,9 +41,6 @@ def _load_paddle_ocr():
         _PADDLE_OCR_HI = PaddleOCR(use_angle_cls=True, lang="hi")
 
     return _PADDLE_OCR_EN, _PADDLE_OCR_HI
-
-
-
 
 def extract_title_from_first_page(doc):
     """
@@ -76,7 +75,6 @@ class PageExtraction:
     tables: List[str]
     ocr_text: str
 
-
 def _extract_tables(page: fitz.Page) -> List[pd.DataFrame]:
     """Extract tables using PyMuPDF structured detection as DataFrames."""
     try:
@@ -90,7 +88,6 @@ def _extract_tables(page: fitz.Page) -> List[pd.DataFrame]:
         except Exception:
             continue
     return dfs
-
 
 def _preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
     """Preprocess image for better OCR, especially for handwritten text."""
@@ -115,6 +112,7 @@ def _preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
 def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = True) -> str:
     """
     OCR using PaddleOCR (English + Hindi).
+    Compatible with PaddleOCR 3.x
     """
 
     ocr_en, ocr_hi = _load_paddle_ocr()
@@ -133,8 +131,8 @@ def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = Tru
 
     # English OCR
     try:
-        result_en = ocr_en.ocr(img_np, cls=True)
-        if result_en:
+        result_en = ocr_en.ocr(img_np)
+        if result_en and len(result_en) > 0:
             for line in result_en[0]:
                 texts.append(line[1][0])
         print("[OCR] PaddleOCR English used")
@@ -143,8 +141,8 @@ def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = Tru
 
     # Hindi OCR
     try:
-        result_hi = ocr_hi.ocr(img_np, cls=True)
-        if result_hi:
+        result_hi = ocr_hi.ocr(img_np)
+        if result_hi and len(result_hi) > 0:
             for line in result_hi[0]:
                 texts.append(line[1][0])
         print("[OCR] PaddleOCR Hindi used")
@@ -152,9 +150,6 @@ def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = Tru
         print("[OCR] Hindi OCR error:", e)
 
     return "\n".join(texts).strip()
-
-
-
 
 
 def extract_pdf(path: Path) -> List[PageExtraction]:
