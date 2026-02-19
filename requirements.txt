@@ -19,8 +19,35 @@ llama-cpp-python==0.2.90
 pandas==2.2.2
 numpy==1.26.4
 tqdm==4.66.4
-torch 
+
+#paddle update
+
+#for below pakage run below: 
+# pip uninstall torch torchvision torchaudio -y
+# pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+
+torch==2.2.2 
+torchvision==0.17.2 
+torchaudio==2.2.2
+ 
+# run below command before installing opencv 
+# pip uninstall opencv-python-headless -y
+# pip uninstall opencv-python -y
+# pip uninstall opencv-contrib-python -y
+
+opencv-python==4.6.0.66 
+opencv-contrib-python==4.6.0.66
+
+numpy==1.26.4  # pip install numpy==1.26.4 --force-reinstall
+
 transformers==4.40.2
-paddleocr 
-paddlepaddle
+
+# pip uninstall paddleocr -y
+paddleocr==2.7.3
+
+# pip uninstall paddlepaddle -y
+paddlepaddle==2.6.2
+
+paddlex==3.4.1
+
 
