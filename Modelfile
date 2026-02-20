@@ -1,0 +1,15 @@
+FROM qwen2.5:7b
+
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.15
+PARAMETER num_predict 512
+
+SYSTEM """
+You are a factual question-answering assistant.
+Answer strictly using the provided context.
+Do not guess or add information.
+If the answer is not present, say:
+"I do not know based on the provided document."
+"""

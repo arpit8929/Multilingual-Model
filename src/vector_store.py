@@ -13,6 +13,8 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.schema import Document
 from langchain_community.vectorstores import Chroma
 from src.config import settings
+from sentence_transformers import CrossEncoder
+
 
 
 class VectorStore:
@@ -30,6 +32,11 @@ class VectorStore:
             embedding_function=self.embeddings,
             persist_directory=str(self.persist_path),
         )
+        if settings.use_reranker:
+            self.reranker = CrossEncoder(settings.reranker_model)
+        else:
+            self.reranker = None
+
 
     def add_documents(self, docs: List[Document]) -> None:
         self._db.add_documents(docs)
@@ -48,6 +55,33 @@ class VectorStore:
                 "score_threshold": settings.score_threshold
             }
         )
+    def retrieve(self, query: str):
+        """
+        Retrieve documents with optional reranking.
+        """
+
+        retriever = self.as_retriever()
+        docs = retriever.invoke(query)
+
+        if not docs:
+            return []
+
+        # If reranker disabled → return directly
+        if not settings.use_reranker or self.reranker is None:
+            return docs[:settings.final_top_k]
+
+        # Only rerank top N docs
+        candidate_docs = docs[:settings.rerank_top_k]
+
+        pairs = [(query, doc.page_content) for doc in candidate_docs]
+        scores = self.reranker.predict(pairs)
+
+        ranked_docs = [
+            doc for _, doc in sorted(zip(scores, candidate_docs), reverse=True)
+        ]
+
+        return ranked_docs[:settings.final_top_k]
+
 
     def persist(self) -> None:
         self._db.persist()

@@ -7,6 +7,21 @@ from langchain_community.llms import LlamaCpp
 from langchain.prompts import PromptTemplate
 from src.config import settings
 from src.vector_store import VectorStore
+from langchain.schema import BaseRetriever
+from typing import List
+from langchain.schema import Document
+from pydantic import Field
+
+
+class RerankRetriever(BaseRetriever):
+    store: VectorStore = Field()
+
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+        return self.store.retrieve(query)
+
+    async def _aget_relevant_documents(self, query: str) -> List[Document]:
+        return self.store.retrieve(query)
+
 
 QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
@@ -29,6 +44,7 @@ QA_PROMPT = PromptTemplate(
 
     ),
 )
+
 
 def load_llm(model_path: Path | str | None = None) -> LlamaCpp:
     path = Path(model_path or settings.model_path)
@@ -192,17 +208,23 @@ def clean_answer(answer: str) -> str:
     return result.strip()
 
 
+
 def build_chain(store: Optional[VectorStore] = None) -> RetrievalQA:
-    """Build QA chain with improved retrieval."""
+    """Build QA chain with reranking retrieval."""
+
     store = store or VectorStore()
     llm = load_llm()
-    # Get retriever with increased document count for better coverage
-    retriever = store.as_retriever()
+
+    # Use custom reranking retriever
+    retriever = RerankRetriever(store=store)
+
+
     return RetrievalQA.from_chain_type(
         llm=llm,
         retriever=retriever,
         chain_type="stuff",
         chain_type_kwargs={"prompt": QA_PROMPT},
         return_source_documents=True,
-    )   
+    )
+ 
 

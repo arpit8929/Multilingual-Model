@@ -148,8 +148,13 @@ def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = Tru
         print("[OCR] PaddleOCR Hindi used")
     except Exception as e:
         print("[OCR] Hindi OCR error:", e)
+    ocr_result = "\n".join(texts).strip()
 
-    return "\n".join(texts).strip()
+    print("\n=== OCR TEXT SAMPLE ===")
+    print(ocr_result[:500])
+    print("======================\n")
+
+    return ocr_result
 
 
 def extract_pdf(path: Path) -> List[PageExtraction]:
@@ -242,7 +247,7 @@ def build_documents(pages: List[PageExtraction], source: str) -> List[Document]:
                     page_content=chunk,
                     metadata={"source": source, "page": i + 1, "type": "text"},
                 )
-            )
+            )  
     return docs
 
 

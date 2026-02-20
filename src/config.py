@@ -26,8 +26,20 @@ class Settings:
     n_ctx: int = int(os.environ.get("N_CTX", 4096))
     n_threads: int = int(os.environ.get("N_THREADS", max(os.cpu_count() or 4, 4)))
     temperature: float = float(os.environ.get("TEMPERATURE", 0.1))
-    top_k: int = int(os.environ.get("TOP_K", 10))  # Increased slightly for better coverage while staying within context window
+
+    # 🔍 Retrieval settings
+    top_k: int = int(os.environ.get("TOP_K", 10))
     score_threshold: float = float(os.environ.get("SCORE_THRESHOLD", 0.4))
+
+    # 🔁 Reranking settings
+    use_reranker: bool = os.environ.get("USE_RERANKER", "true").lower() == "true"
+    rerank_top_k: int = int(os.environ.get("RERANK_TOP_K", 8))   # docs from retriever to rerank
+    final_top_k: int = int(os.environ.get("FINAL_TOP_K", 5))     # docs sent to LLM
+    reranker_model: str = os.environ.get(
+        "RERANKER_MODEL",
+        "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    )
+
     collection_name: str = os.environ.get("COLLECTION_NAME", "pdf_qa")
 
 
