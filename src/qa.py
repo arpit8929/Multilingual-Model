@@ -14,7 +14,7 @@ from pydantic import Field
 
 
 class RerankRetriever(BaseRetriever):
-    store: VectorStore = Field()
+    store: VectorStore = Field() 
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
         return self.store.retrieve(query)
@@ -25,7 +25,7 @@ class RerankRetriever(BaseRetriever):
 
 QA_PROMPT = PromptTemplate(
     input_variables=["context", "question"],
-    template=(
+    template=(     
         "You are an accurate and careful assistant for PDF Question Answering.\n"
         
         "RULES (follow strictly):\n"
@@ -34,9 +34,7 @@ QA_PROMPT = PromptTemplate(
         "- Do NOT guess.\n"
         "- If the answer is not clearly present, say exactly:\n"
         "  I do not know based on the provided document.\n"
-        "- If the document lists multiple points, you MUST return ALL points.\n"
-        "- If fewer points are present, say: Only X points are mentioned in the document.\n"
-        "- Always return the answer in structured bullet points.\n\n"
+        "- If the document lists multiple points, you MUST return ALL points.\n\n"
         
         "Context:\n{context}\n\n"
         "Question:\n{question}\n\n"
