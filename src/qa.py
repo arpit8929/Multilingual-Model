@@ -55,7 +55,7 @@ def load_llm(model_path: Path | str | None = None) -> LlamaCpp:
         temperature=settings.temperature,
         f16_kv=True,
         verbose=False,
-        stop=["Question:", "Context:", "\n\n\n"]
+        stop=["\nUser:","\nHuman:", "\nQuestion:"]
     )
 
 
@@ -70,7 +70,9 @@ def clean_answer(answer: str) -> str:
     """
     if not answer:
         return answer
-    
+    # Preserve numbered or bullet lists exactly as-is
+    if re.search(r'^\s*(\d+\.|-|\*)\s+', answer, re.MULTILINE):
+        return answer.strip()
     answer = answer.strip()
     
     # Remove common question format phrases (Hindi and English)
@@ -167,7 +169,7 @@ def clean_answer(answer: str) -> str:
     
     # Join complete sentences
     if unique_sentences:
-        result = ' '.join(unique_sentences).strip()
+        result = '\n'.join(unique_sentences).strip()
     else:
         # Fallback: use original but ensure it ends properly
         result = answer
@@ -223,4 +225,5 @@ def build_chain(store: Optional[VectorStore] = None) -> RetrievalQA:
         chain_type="stuff",
         chain_type_kwargs={"prompt": QA_PROMPT},
         return_source_documents=True,
+        
     )

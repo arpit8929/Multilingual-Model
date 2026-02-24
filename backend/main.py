@@ -308,7 +308,9 @@ async def ask_question(request: QuestionRequest):
             question=request.question
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate answer: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/clear")
