@@ -1,6 +1,3 @@
-"""
-FastAPI backend for Multilingual QnA Assistant
-"""
 import json
 import os
 import re
@@ -50,7 +47,6 @@ CHAT_HISTORY_FILE = project_root / "chat_history.json"
 uploaded_documents = []  # Track uploaded document names
 
 def load_chat_history():
-    """Load chat history from file."""
     if CHAT_HISTORY_FILE.exists():
         try:
             with open(CHAT_HISTORY_FILE, "r", encoding="utf-8") as f:
@@ -60,7 +56,6 @@ def load_chat_history():
     return []
 
 def save_chat_history(messages):
-    """Save chat history to file."""
     try:
         with open(CHAT_HISTORY_FILE, "w", encoding="utf-8") as f:
             json.dump(messages, f, ensure_ascii=False, indent=2)
@@ -69,7 +64,6 @@ def save_chat_history(messages):
 
 
 def extract_answer_from_sources(question: str, source_docs: List) -> str:
-    """Fallback: Extract answer from source documents when model fails."""
     if not source_docs:
         return ""
     
@@ -124,13 +118,11 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
     return {"message": "Multilingual QnA Assistant API", "status": "running"}
 
 
 @app.get("/api/status", response_model=StatusResponse)
 async def get_status():
-    """Get current status of the system."""
     global vector_store, uploaded_documents
     if vector_store is None:
         raise HTTPException(status_code=500, detail="Vector store not initialized")
@@ -150,7 +142,6 @@ async def upload_pdf(
     file: UploadFile = File(...),
     clear_existing: bool = False
 ):
-    """Upload and ingest a PDF file."""
     global vector_store, qa_chain
     
     if vector_store is None:
@@ -210,7 +201,6 @@ async def upload_pdf(
 
 @app.post("/api/ask", response_model=QuestionResponse)
 async def ask_question(request: QuestionRequest):
-    """Ask a question and get an answer."""
     global qa_chain, vector_store
     
     if qa_chain is None:
@@ -234,14 +224,12 @@ async def ask_question(request: QuestionRequest):
         source_docs = response.get("source_documents", [])
         
         # Debug logging
-        # Debug logging
         print(f"DEBUG: Raw answer length: {len(raw_answer) if raw_answer else 0}")
         print(f"DEBUG: Raw answer preview: {raw_answer[:200] if raw_answer else 'EMPTY'}")
         
         # Clean the answer
         if raw_answer and raw_answer.strip():
             answer = clean_answer(raw_answer)
-            # Check if cleaning removed everything
             if not answer or not answer.strip():
                 print("WARNING: clean_answer removed all content, using raw answer")
                 answer = raw_answer.strip()
@@ -272,7 +260,6 @@ async def ask_question(request: QuestionRequest):
                 ]
                 has_generic = any(re.search(pattern, answer, re.IGNORECASE) for pattern in generic_patterns_in_answer)
                 
-                # If sources only vaguely mention limitations and answer is generic, likely hallucinated
                 if has_vague_mention and has_generic:
                     # Look for specific limitations in sources
                     if not any(specific in all_source_content for specific in [

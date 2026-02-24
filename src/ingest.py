@@ -43,9 +43,6 @@ def _load_paddle_ocr():
     return _PADDLE_OCR_EN, _PADDLE_OCR_HI
 
 def extract_title_from_first_page(doc):
-    """
-    Extract document title from the first page using layout heuristics.
-    """
     page = doc[0]
     blocks = page.get_text("blocks")
 
@@ -76,7 +73,6 @@ class PageExtraction:
     ocr_text: str
 
 def _extract_tables(page: fitz.Page) -> List[pd.DataFrame]:
-    """Extract tables using PyMuPDF structured detection as DataFrames."""
     try:
         tables = page.find_tables()
     except Exception:
@@ -90,7 +86,6 @@ def _extract_tables(page: fitz.Page) -> List[pd.DataFrame]:
     return dfs
 
 def _preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
-    """Preprocess image for better OCR, especially for handwritten text."""
     # Convert to grayscale if needed
     if img.mode != "L":
         img = img.convert("L")
@@ -110,11 +105,6 @@ def _preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
 
 
 def _ocr_page(page: fitz.Page, scale: float = 3.0, use_preprocessing: bool = True) -> str:
-    """
-    OCR using PaddleOCR (English + Hindi).
-    Compatible with PaddleOCR 3.x
-    """
-
     ocr_en, ocr_hi = _load_paddle_ocr()
 
     mat = fitz.Matrix(scale, scale)
@@ -181,8 +171,6 @@ def extract_pdf(path: Path) -> List[PageExtraction]:
         )
 
     return pages
-
-
 
 def build_documents(pages: List[PageExtraction], source: str) -> List[Document]:
     text_blocks: List[str] = []

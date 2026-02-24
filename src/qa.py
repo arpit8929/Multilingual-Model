@@ -136,7 +136,7 @@ def clean_answer(answer: str) -> str:
         answer = re.sub(pattern, "", answer, flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
     
     # Find complete sentences and remove duplicates
-    # Hindi/English sentence endings: . ! ? । (Devanagari full stop)
+    # Hindi/English sentence endings: . ! ? । 
     # Split into sentences, keeping the punctuation
     sentences = []
     current_sentence = ""
@@ -224,5 +224,3 @@ def build_chain(store: Optional[VectorStore] = None) -> RetrievalQA:
         chain_type_kwargs={"prompt": QA_PROMPT},
         return_source_documents=True,
     )
- 
-
