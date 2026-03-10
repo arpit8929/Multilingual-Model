@@ -62,7 +62,7 @@ class VectorStore:
 
         retriever = self.as_retriever()
         docs = retriever.invoke(query)
-
+ 
         if not docs:
             return []
 

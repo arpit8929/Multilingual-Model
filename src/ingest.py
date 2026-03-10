@@ -8,6 +8,9 @@ from paddleocr import PaddleOCR
 import cv2
 import numpy as np
 import os
+
+from sqlalchemy import values
+from streamlit import columns
 os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
 
@@ -157,7 +160,9 @@ def extract_pdf(path: Path) -> List[PageExtraction]:
         text = page.get_text("text") or ""
         table_dfs = _extract_tables(page)
         tables_csv = [df.to_csv(index=False) for df in table_dfs]
-        ocr_text = _ocr_page(page)
+        ocr_text = ""
+        if len(text.strip()) < 50:
+            ocr_text = _ocr_page(page)
 
         if idx == 0 and title:
             text = f"Document Title: {title}\n\n{text}"
@@ -187,7 +192,10 @@ def build_documents(pages: List[PageExtraction], source: str) -> List[Document]:
             page_text = page.ocr_text
         elif page.text.strip() and page.ocr_text:
             # Both available - combine them
-            page_text = f"{page.text}\n\n{page.ocr_text}"
+            if page.text.strip():
+                page_text = page.text
+            elif page.ocr_text:
+                page_text = page.ocr_text
         elif page.text.strip():
             # Only extracted text available
             page_text = page.text
@@ -215,7 +223,9 @@ def build_documents(pages: List[PageExtraction], source: str) -> List[Document]:
                 )
                 continue
             for _, row in df.iterrows():
-                row_text = " | ".join(str(v) for v in row.tolist())
+                columns = df.columns.tolist()
+                values = row.tolist()
+                row_text = ", ".join(f"{col}: {val}" for col, val in zip(columns, values))
                 docs.append(
                     Document(
                         page_content=row_text,
