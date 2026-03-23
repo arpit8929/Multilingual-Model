@@ -24,7 +24,7 @@ class VectorStore:
         self.persist_path = Path(persist_directory or settings.chroma_dir)
         self.persist_path.mkdir(parents=True, exist_ok=True)
         self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-mpnet-base-v2",
+            model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
             encode_kwargs={"normalize_embeddings": True},
         )
         self._db = Chroma(

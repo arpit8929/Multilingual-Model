@@ -32,8 +32,9 @@ QA_PROMPT = PromptTemplate(
         "- Answer ONLY using the information in the provided context.\n"
         "- Do NOT use outside knowledge.\n"
         "- Do NOT guess.\n"
-        "- If the answer is not clearly present, say exactly:\n"
-        "  I do not know based on the provided document.\n"
+        "- If the answer is not present in the context, respond:"
+        "- Not mentioned in the document.\n"
+        "Answer in the same language as the question."
         "- If the document lists multiple points, you MUST return ALL points.\n\n"
         
         "Context:\n{context}\n\n"
