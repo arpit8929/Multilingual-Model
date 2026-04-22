@@ -25,7 +25,13 @@ warnings.filterwarnings("ignore", message=".*torch.classes.*")
 warnings.filterwarnings("ignore", message=".*telemetry.*")
 
 from src.ingest import ingest_file
-from src.qa import build_chain, clean_answer
+from src.qa import (
+    answer_not_found_message,
+    build_chain,
+    clean_answer,
+    enforce_answer_language,
+    format_query_for_chain,
+)
 from src.vector_store import VectorStore
 
 app = FastAPI(title="Multilingual QnA Assistant API", version="1.0.0")
@@ -170,7 +176,7 @@ async def upload_pdf(
         try:
             os.chdir(project_root)
             # Ingest the PDF
-            count, db_path = ingest_file(tmp_path, vector_store)
+            count, db_path = ingest_file(tmp_path, vector_store, source_name=file.filename)
             
             # Rebuild chain after adding documents
             qa_chain = build_chain(vector_store)
@@ -219,7 +225,7 @@ async def ask_question(request: QuestionRequest):
     
     try:
         # Get response from QA chain
-        response = qa_chain.invoke({"query": request.question})
+        response = qa_chain.invoke({"query": format_query_for_chain(request.question)})
         raw_answer = response.get("result", "")
         source_docs = response.get("source_documents", [])
         
@@ -276,6 +282,12 @@ async def ask_question(request: QuestionRequest):
             if not answer:
                 answer = "⚠️ **No response generated.**\n\nThe model did not produce an answer. Please check the source documents below."
         
+        answer = enforce_answer_language(
+            answer,
+            request.question,
+            document_language=vector_store.get_active_document_language(),
+        )
+
         # Serialize source documents
         source_docs_serialized = []
         for doc in source_docs:

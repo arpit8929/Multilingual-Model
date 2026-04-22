@@ -26,10 +26,12 @@ class Settings:
     n_ctx: int = int(os.environ.get("N_CTX", 4096))
     n_threads: int = int(os.environ.get("N_THREADS", max(os.cpu_count() or 4, 4)))
     temperature: float = float(os.environ.get("TEMPERATURE", 0.1))
+    translation_temperature: float = float(os.environ.get("TRANSLATION_TEMPERATURE", 0.0))
 
     # 🔍 Retrieval settings
     top_k: int = int(os.environ.get("TOP_K", 10))
     score_threshold: float = float(os.environ.get("SCORE_THRESHOLD", 0.4))
+    retrieval_k_multiplier: int = int(os.environ.get("RETRIEVAL_K_MULTIPLIER", 2))
 
     # 🔁 Reranking settings
     use_reranker: bool = os.environ.get("USE_RERANKER", "true").lower() == "true"
@@ -39,6 +41,18 @@ class Settings:
         "RERANKER_MODEL",
         "cross-encoder/ms-marco-MiniLM-L-6-v2"
     )
+    enable_hindi_translation: bool = os.environ.get("ENABLE_HINDI_TRANSLATION", "false").lower() == "true"
+    enable_query_translation: bool = os.environ.get("ENABLE_QUERY_TRANSLATION", "true").lower() == "true"
+    hindi_char_threshold: int = int(os.environ.get("HINDI_CHAR_THRESHOLD", 8))
+    hindi_ratio_threshold: float = float(os.environ.get("HINDI_RATIO_THRESHOLD", 0.12))
+    translation_max_chars: int = int(os.environ.get("TRANSLATION_MAX_CHARS", 1200))
+    tesseract_lang: str = os.environ.get("TESSERACT_LANG", "hin+eng")
+    ocr_min_hindi_chars: int = int(os.environ.get("OCR_MIN_HINDI_CHARS", 12))
+    ocr_quality_margin: int = int(os.environ.get("OCR_QUALITY_MARGIN", 8))
+    translation_log_preview: int = int(os.environ.get("TRANSLATION_LOG_PREVIEW", 140))
+    page_neighbor_window: int = int(os.environ.get("PAGE_NEIGHBOR_WINDOW", 1))
+    max_context_docs: int = int(os.environ.get("MAX_CONTEXT_DOCS", 6))
+    max_context_chars: int = int(os.environ.get("MAX_CONTEXT_CHARS", 9000))
 
     collection_name: str = os.environ.get("COLLECTION_NAME", "pdf_qa")
 

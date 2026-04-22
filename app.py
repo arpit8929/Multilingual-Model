@@ -12,7 +12,13 @@ os.environ["ANONYMIZED_TELEMETRY"] = "False"
 warnings.filterwarnings("ignore")
 
 from src.ingest import ingest_file
-from src.qa import build_chain, clean_answer
+from src.qa import (
+    answer_not_found_message,
+    build_chain,
+    clean_answer,
+    enforce_answer_language,
+    format_query_for_chain,
+)
 from src.vector_store import VectorStore
 
 # Utility Functions
@@ -90,7 +96,7 @@ with st.sidebar:
         if clear_before_upload:
             st.session_state.store.clear()
 
-        count, _ = ingest_file(tmp_path, st.session_state.store)
+        count, _ = ingest_file(tmp_path, st.session_state.store, source_name=uploaded.name)
         st.session_state.qa_chain = build_chain(st.session_state.store)
         st.session_state.messages = []
         save_chat_history([])
@@ -129,7 +135,7 @@ if prompt:
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = st.session_state.qa_chain.invoke({"query": prompt})
+            response = st.session_state.qa_chain.invoke({"query": format_query_for_chain(prompt)})
 
             raw_answer = response.get("result", "").strip()
             source_docs = response.get("source_documents", [])
@@ -141,10 +147,15 @@ if prompt:
                     raw_answer = "NOT_FOUND"
 
             if raw_answer == "NOT_FOUND":
-                answer = "उत्तर संदर्भ में नहीं मिला" if lang == "hindi" else "Answer not found in context"
+                answer = answer_not_found_message(prompt)
             else:
                 answer = clean_answer(raw_answer)
 
+            answer = enforce_answer_language(
+                answer,
+                prompt,
+                document_language=st.session_state.store.get_active_document_language(),
+            )
             st.markdown(answer)
 
     # Save assistant message
