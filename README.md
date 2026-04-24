@@ -1,419 +1,309 @@
-## Hindi/English PDF Q&A LLM
+# Multilingual PDF Q&A Assistant
 
-End-to-end retrieval-augmented QA for Hindi, English, or Hinglish PDFs, including table extraction. Stack: PyMuPDF, Tesseract OCR (hin+eng), ChromaDB + multilingual MiniLM embeddings, LangChain, LLaMA-3.2-3B-Instruct Q4_K_S (llama.cpp), Streamlit UI.
+This project is a local PDF question-answering assistant for English, Hindi, and Hinglish questions. It uses a React frontend, a FastAPI backend, ChromaDB for vector search, OCR for scanned/image PDFs, and a local GGUF Llama model for answer generation.
 
----
+The current backend is designed to treat English and Hindi uploads differently:
 
-## 🚀 Quick Start Guide for Team Members
+- English documents use the legacy-style English path: no query translation, simpler retrieval, English-only OCR when the page is clearly English, and an English-focused QA prompt.
+- Hindi documents use the Hindi-aware path: Hindi/legacy-Hindi detection, PaddleOCR Hindi, Tesseract fallback, query translation to Hindi for English/Hinglish questions, neighboring chunk expansion, and answer-language cleanup.
+- Hinglish questions on Hindi documents use the original Hinglish query plus a Hindi retrieval query. The English query-translation branch is intentionally disabled because it can produce answer-like text and hurt retrieval.
 
-> **💡 Quick Setup Option**: For Windows users, you can use the automated setup script:
-> ```powershell
-> .\setup.ps1
-> ```
-> This will create the virtual environment and install dependencies automatically. Then download the model file and run `python verify_setup.py` to verify everything is set up correctly.
+## Project Structure
 
----
-
-### Step 1: Prerequisites Installation
-
-#### 1.1 Install Python 3.10 or higher
-- Download from [python.org](https://www.python.org/downloads/)
-- **Important**: Check "Add Python to PATH" during installation
-- Verify installation:
-  ```powershell
-  python --version
-  ```
-
-#### 1.2 Install Tesseract OCR (Windows)
-- Download installer from [UB Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki)
-- **Recommended**: Download `tesseract-ocr-w64-setup-5.x.x.exe`
-- During installation:
-  - ✅ Check "Add to PATH"
-  - ✅ Install Hindi language pack (`hin.traineddata`)
-- Verify installation:
-  ```powershell
-  tesseract --version
-  ```
-- If Tesseract is not in PATH, note the installation directory (usually `C:\Program Files\Tesseract-OCR`)
-
-#### 1.3 Install Visual C++ Build Tools (CRITICAL - Required for llama-cpp-python)
-
-**⚠️ This is REQUIRED for Windows users - do not skip this step!**
-
-- Download from [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
-- Install "Desktop development with C++" workload
-- Alternative: [Visual Studio Build Tools](https://aka.ms/vs/17/release/vs_buildtools.exe)
-
-**Why is this needed?** The `llama-cpp-python` package must be compiled from source on Windows, which requires C++ build tools.
-
-**Verification**: After installation, restart your terminal and try:
-```powershell
-cl  # Should show Microsoft C++ compiler version
+```text
+BISAG-212/
+  app.py                       # Legacy Streamlit UI
+  backend/
+    main.py                    # FastAPI API server
+    run.py                     # Alternative backend runner
+  frontend/
+    src/App.jsx                # React app state and API flow
+    src/services/api.js        # Frontend API client
+    src/components/            # Chat and sidebar components
+  src/
+    config.py                  # Central settings and env overrides
+    ingest.py                  # PDF extraction, OCR, chunking, metadata
+    vector_store.py            # ChromaDB embeddings, retrieval, reranking
+    qa.py                      # LLM loading, prompts, query translation, cleanup
+  models/
+    llama-3.2-3b-instruct-q4_K_S.gguf
+  chroma_db/                   # Local persisted vector database
+  chat_history.json            # Saved chat messages
+  requirements.txt             # Python dependencies
 ```
 
----
+## Current Flow
 
-### Step 2: Clone the Repository
+1. The user uploads a PDF from the React UI.
+2. The frontend sends it to `POST /api/upload`.
+3. FastAPI stores the PDF temporarily and calls `src.ingest.ingest_file`.
+4. `src/ingest.py` extracts text, tables, and OCR text page by page.
+5. The ingestion layer detects whether the whole document is English or Hindi.
+6. Text is split into chunks with page/chunk metadata.
+7. Chunks are embedded with `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
+8. Chunks are stored in ChromaDB under `chroma_db/`.
+9. Questions are sent to `POST /api/ask`.
+10. `src/qa.py` formats the query, optionally translates the query for Hindi documents, retrieves context, calls the local GGUF model, cleans the output, and returns source snippets.
 
-```powershell
-git clone https://github.com/arpit8929/Multilingual-Model.git
-cd Multilingual-Model
+## English Document Behavior
+
+For English PDFs and clearly English scanned/image PDFs:
+
+- Query translation is skipped.
+- Answer rewrite translation is skipped.
+- Retrieval uses a simpler similarity path.
+- The English QA prompt is used.
+- OCR can use an English-only PaddleOCR path when text is clearly English.
+
+This is intentional because English documents had better accuracy before the Hindi translator path was added.
+
+Expected log:
+
+```text
+[QueryTranslation] Skipping query translation for English document
 ```
 
----
+## Hindi Document Behavior
 
-### Step 3: Set Up Python Virtual Environment
+For Hindi PDFs:
+
+- The document is marked with `document_lang=hi`.
+- Legacy Hindi font patterns are treated as Hindi signals.
+- PaddleOCR English, PaddleOCR Hindi, and Tesseract candidates may be compared.
+- English and Hinglish questions can be translated into Hindi for retrieval.
+- The final answer is rewritten into the question language when needed.
+
+Expected logs:
+
+```text
+[Ingest] Active document language set to hi
+[QueryTranslation] Using Hindi retrieval query: ...
+```
+
+Chunk translation is currently disabled by default:
+
+```text
+ENABLE_HINDI_TRANSLATION=false
+```
+
+That keeps Hindi PDF upload faster. Query-time translation is the main Hindi retrieval helper.
+
+## Requirements
+
+Recommended environment:
+
+- Windows PowerShell
+- Python 3.10 or newer
+- Node.js 18 or newer
+- Tesseract OCR installed and available in `PATH`
+- Tesseract Hindi and English language data installed
+- Local GGUF model file in `models/`
+
+Default model path:
+
+```text
+models/llama-3.2-3b-instruct-q4_K_S.gguf
+```
+
+You can override it with `MODEL_PATH`.
+
+## Python Setup
+
+From the project root:
 
 ```powershell
-# Create virtual environment
 python -m venv .venv
-
-# Activate virtual environment
-# For PowerShell:
-.venv\Scripts\Activate.ps1
-
-# If you get an execution policy error, run:
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# For Command Prompt (cmd):
-# .venv\Scripts\activate.bat
-
-# Upgrade pip
+.\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-```
-
----
-
-### Step 4: Install Python Dependencies
-
-```powershell
-# Make sure virtual environment is activated (you should see (.venv) in prompt)
 pip install -r requirements.txt
 ```
 
-**Note**: Installation may take 5-10 minutes, especially for packages like `torch`, `llama-cpp-python`, etc.
+If PaddleOCR or Torch gives installation trouble, follow the pinned versions in `requirements.txt`. PaddleOCR downloads OCR model files on first use.
 
----
+## Frontend Setup
 
-### Step 5: Download the LLaMA Model
-
-The model file is **NOT included in git** (see `.gitignore`). You need to download it separately:
-
-#### Option A: Direct Download (Recommended)
-1. Download `llama-3.2-3b-instruct-q4_K_S.gguf` from:
-   - [Hugging Face](https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF) (search for `q4_K_S`)
-   - Or use: `https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_S.gguf`
-
-2. Create `models` folder in project root:
-   ```powershell
-   mkdir models
-   ```
-
-3. Place the downloaded file as:
-   ```
-   models/llama-3.2-3b-instruct-q4_K_S.gguf
-   ```
-
-#### Option B: Using Ollama (Alternative)
 ```powershell
-# Install Ollama from https://ollama.ai
-ollama pull llama3.2:3b
-# Copy model from Ollama's directory to models/
+cd frontend
+npm install
+cd ..
 ```
 
-**Model Size**: ~1.8 GB (ensure you have enough disk space)
+## Run the App
 
----
+Start the backend:
 
-### Step 6: Configure Environment (Optional)
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m backend.main
+```
 
-Create a `.env` file in the project root if you need custom settings:
+The backend runs at:
+
+```text
+http://localhost:8000
+```
+
+Start the frontend in a second terminal:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+The frontend usually runs at:
+
+```text
+http://localhost:5173
+```
+
+## Optional Streamlit App
+
+The main UI is React + FastAPI, but the legacy Streamlit app still exists:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+streamlit run app.py
+```
+
+## API Endpoints
+
+```text
+GET  /api/status
+POST /api/upload
+POST /api/ask
+POST /api/clear
+GET  /api/chat-history
+POST /api/chat-history/clear
+```
+
+Upload accepts only PDF files.
+
+## Important Environment Variables
+
+Create a `.env` file in the project root if you want to override defaults.
 
 ```env
 MODEL_PATH=models/llama-3.2-3b-instruct-q4_K_S.gguf
 CHROMA_DIR=chroma_db
-TESSDATA_PREFIX=C:\Program Files\Tesseract-OCR\tessdata
-N_THREADS=4
+COLLECTION_NAME=pdf_qa
+
+CHUNK_SIZE=800
+CHUNK_OVERLAP=150
+
 N_CTX=4096
+N_THREADS=8
 TEMPERATURE=0.1
+
+TOP_K=10
+FINAL_TOP_K=5
+MAX_CONTEXT_DOCS=6
+MAX_CONTEXT_CHARS=9000
+PAGE_NEIGHBOR_WINDOW=1
+
+USE_RERANKER=true
+RERANKER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
+
+ENABLE_QUERY_TRANSLATION=true
+ENABLE_HINDI_TRANSLATION=false
+
+TESSERACT_LANG=hin+eng
 ```
 
-**Note**: Only set `TESSDATA_PREFIX` if Tesseract is installed in a non-standard location.
+## Testing and Verification
 
----
-
-### Step 7: Verify Installation (Optional but Recommended)
-
-Run the verification script to check if everything is set up correctly:
+Check Python syntax without writing bytecode:
 
 ```powershell
-python verify_setup.py
+@'
+import ast, pathlib
+for path in [
+    pathlib.Path("src/qa.py"),
+    pathlib.Path("src/ingest.py"),
+    pathlib.Path("src/vector_store.py"),
+    pathlib.Path("backend/main.py"),
+    pathlib.Path("app.py"),
+]:
+    ast.parse(path.read_text(encoding="utf-8"))
+    print("OK", path)
+'@ | .\.venv\Scripts\python -
 ```
 
-This will check:
-- ✅ Python version
-- ✅ Virtual environment
-- ✅ Tesseract OCR installation
-- ✅ Model file presence
-- ✅ Python dependencies
-- ✅ ChromaDB directory
-
----
-
-### Step 8: Run the Application
+Build the frontend:
 
 ```powershell
-# Make sure virtual environment is activated
-streamlit run app.py
+cd frontend
+npm run build
 ```
 
-The application will:
-- Open in your default browser (usually `http://localhost:8501`)
-- Allow you to upload PDFs via the sidebar
-- Process and ingest PDFs automatically
-- Answer questions in Hindi/English/Hinglish
-
----
-
-### Step 9: Using the Application
-
-1. **Upload PDF**: Click "Choose a PDF" in the sidebar and select your PDF file
-2. **Wait for Ingestion**: The app will process the PDF (extract text, tables, OCR)
-3. **Ask Questions**: Type questions in the chat input at the bottom
-4. **View History**: Chat history is saved in `chat_history.json`
-
----
-
-## 📋 Project Flow
-
-- **Ingest**: Load PDF with PyMuPDF → extract text and tables (`find_tables`) → render page images and OCR with Tesseract (`hin+eng`) for scanned content → normalize and merge sources.
-- **Chunk & Embed**: Split text (overlapping chunks) → embed via `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
-- **Store**: Persist embeddings in ChromaDB.
-- **Serve**: Build LangChain RetrievalQA using `LlamaCpp` with the local Q4_K_S model.
-- **UI**: Streamlit app to upload a PDF, ingest it, and query in Hindi/English/Hinglish.
-
----
-
-## 🔧 Troubleshooting
-
-### Issue: Tesseract not found
-**Solution**: 
-- Verify Tesseract is installed and in PATH: `tesseract --version`
-- If not in PATH, set environment variable:
-  ```powershell
-  $env:TESSDATA_PREFIX="C:\Program Files\Tesseract-OCR\tessdata"
-  ```
-
-### Issue: llama-cpp-python installation fails
-**Solution**:
-- Ensure Visual C++ Build Tools are installed
-- Try installing with specific flags:
-  ```powershell
-  pip install llama-cpp-python --no-cache-dir
-  ```
-
-### Issue: Model file not found
-**Solution**:
-- Verify the model file exists at `models/llama-3.2-3b-instruct-q4_K_S.gguf`
-- Check file name matches exactly (case-sensitive)
-- Ensure model file is ~1.8 GB in size
-
-### Issue: Out of memory errors
-**Solution**:
-- Reduce `N_CTX` in `.env` (default: 4096, try 2048)
-- Close other applications
-- Use a smaller model if available
-
-### Issue: ChromaDB errors
-**Solution**:
-- Delete `chroma_db` folder and let it recreate
-- Ensure write permissions in project directory
-
----
-
-## 📁 Project Structure
-
-```
-BISAG-212/
-├── app.py                 # Streamlit main application
-├── requirements.txt       # Python dependencies
-├── .gitignore            # Git ignore rules
-├── README.md             # This file
-├── models/               # Model files (not in git)
-│   └── llama-3.2-3b-instruct-q4_K_S.gguf
-├── chroma_db/            # Vector database (not in git)
-├── src/
-│   ├── config.py         # Configuration settings
-│   ├── ingest.py         # PDF ingestion logic
-│   ├── qa.py             # Q&A chain builder
-│   └── vector_store.py   # ChromaDB wrapper
-└── .streamlit/
-    └── config.toml       # Streamlit configuration
-```
-
----
-
-## 🔑 Environment Variables
-
-- `MODEL_PATH` - Path to GGUF model file (default: `models/llama-3.2-3b-instruct-q4_K_S.gguf`)
-- `CHROMA_DIR` - ChromaDB directory (default: `chroma_db`)
-- `TESSDATA_PREFIX` - Tesseract data directory (if custom location)
-- `N_THREADS` - Number of CPU threads for llama.cpp (default: auto-detect)
-- `N_CTX` - Context window size (default: 4096)
-- `TEMPERATURE` - LLM temperature (default: 0.1)
-- `CHUNK_SIZE` - Text chunk size (default: 800)
-- `CHUNK_OVERLAP` - Chunk overlap (default: 200)
-
----
-
-## 📝 Notes
-
-- **Tables**: Uses PyMuPDF `find_tables`; falls back to OCR text if not structurally found.
-- **OCR**: Language pack uses `hin+eng`, enabling Hinglish questions and answers based on retrieved context.
-- **Embeddings**: Uses multilingual MiniLM via sentence-transformers (no fastText dependency).
-- **Model**: Model files are excluded from git to keep repository size small (~17 KB).
-
----
-
-## 🆘 Need Help?
-
-If you encounter issues:
-1. Check the Troubleshooting section above
-2. Verify all prerequisites are installed correctly
-3. Ensure virtual environment is activated
-4. Check that model file is in the correct location
-5. Review error messages in the terminal/console
-
----
-
-## 📋 Quick Reference
-
-### Daily Usage Commands
+Run the setup verifier if needed:
 
 ```powershell
-# Activate virtual environment
-.\.venv\Scripts\Activate.ps1
-
-# Run the application
-streamlit run app.py
-
-# Verify setup
-python verify_setup.py
-
-# Pre-ingest a PDF from command line
-python -m src.ingest --pdf path/to/file.pdf
+.\.venv\Scripts\python verify_setup.py
 ```
 
----
+## Operational Notes
 
-## 🔧 Troubleshooting
+- Clear and re-upload PDFs after changing ingestion, OCR, chunking, or metadata logic.
+- Existing ChromaDB chunks are not automatically updated after code changes.
+- English documents should show query translation skipped.
+- Hindi documents should show active language set to `hi`.
+- If a Hindi PDF is legacy-font encoded, the OCR path should avoid the English-only shortcut.
+- Uploading scanned Hindi PDFs can be slow because OCR is expensive.
+- PostHog telemetry errors from ChromaDB are harmless and do not affect answers.
 
-### "Failed building wheel for llama-cpp-python" Error
+## Troubleshooting
 
-**Symptoms**:
+### Model file not found
+
+Make sure the GGUF file exists:
+
+```text
+models/llama-3.2-3b-instruct-q4_K_S.gguf
 ```
-CMake Error: CMAKE_C_COMPILER not set, after EnableLanguage
-CMake Error: CMAKE_CXX_COMPILER not set, after EnableLanguage
-error: subprocess-exited-with-error
-× Building wheel for llama-cpp-python (pyproject.toml) did not run successfully.
-```
 
-**Solution**:
-1. Install Visual C++ Build Tools (see Prerequisites section above)
-2. Restart your terminal/command prompt completely
-3. Try installing again:
-   ```powershell
-   pip install llama-cpp-python --no-cache-dir
-   ```
-4. If still failing, try installing from a different source:
-   ```powershell
-   pip install llama-cpp-python --index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
-   ```
+Or set:
 
-### "huggingface-cli not recognized" Error
-
-**Solution**:
 ```powershell
-pip install huggingface_hub
-# Restart terminal, then try again
-huggingface-cli download bartowski/Llama-3.2-3B-Instruct-GGUF llama-3.2-3b-instruct-q4_K_S.gguf --local-dir models/
+$env:MODEL_PATH="D:\path\to\model.gguf"
 ```
 
-### "Tesseract not found" Error
+### Hindi document is detected as English
 
-**Solution**:
-1. Verify Tesseract installation: `tesseract --version`
-2. If not found, reinstall from [UB Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki)
-3. Make sure "Add to PATH" was checked during installation
-4. Or set in `.env`: `TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe`
+Clear and re-upload the PDF after the latest ingestion changes. Look for:
 
-### Virtual Environment Issues
-
-**"execution policy" error in PowerShell**:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```text
+[Ingest] Active document language set to hi
 ```
 
-**Virtual environment not activating**:
-```powershell
-# Make sure you're in the project directory
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+If it says `en`, the text/OCR is not providing enough Hindi or legacy-Hindi signal.
+
+### English document accuracy drops
+
+Make sure the terminal shows:
+
+```text
+[QueryTranslation] Skipping query translation for English document
 ```
 
-### Model Download Issues
+If it does not, clear and re-upload the English PDF.
 
-**Slow download or timeout**:
-```powershell
-# Use a download manager or try:
-huggingface-cli download bartowski/Llama-3.2-3B-Instruct-GGUF llama-3.2-3b-instruct-q4_K_S.gguf --local-dir models/ --resume-download
+### Context window error
+
+Lower these values in `.env`:
+
+```env
+MAX_CONTEXT_DOCS=4
+MAX_CONTEXT_CHARS=7000
 ```
 
-**Alternative download methods**:
-- Direct link: `https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_S.gguf`
-- Use browser download or tools like `wget`/`curl`
+### Tesseract error
 
-### Still Having Issues?
+Install Tesseract OCR and ensure it is available in `PATH`. For Hindi OCR, install Hindi trained data as well.
 
-Run the verification script with verbose output:
-```powershell
-python verify_setup.py --verbose
-```
+## Current Limitations
 
-Or use auto-fix mode:
-```powershell
-python verify_setup.py --auto-fix --verbose
-```
-
----
-
-### Common Workflow
-
-1. **First Time Setup**:
-   ```powershell
-   git clone https://github.com/arpit8929/Multilingual-Model.git
-   cd Multilingual-Model
-   .\setup.ps1  # or follow manual steps
-   # Download model file to models/
-   python verify_setup.py
-   ```
-
-2. **Daily Usage**:
-   ```powershell
-   cd Multilingual-Model
-   .\.venv\Scripts\Activate.ps1
-   streamlit run app.py
-   ```
-
-3. **Upload PDF & Ask Questions**:
-   - Open browser (usually http://localhost:8501)
-   - Upload PDF via sidebar
-   - Wait for ingestion to complete
-   - Ask questions in chat
-
----
-
-## 📄 License
-
-[Add your license information here]
-
+- Hindi accuracy depends heavily on OCR quality.
+- Legacy Hindi font PDFs may still require cleanup if OCR output is noisy.
+- The local 3B quantized model can struggle with long, noisy Hindi context.
+- Chunk translation is disabled by default to keep uploads faster.
+- The React app is the preferred UI; Streamlit is kept as a legacy option.
